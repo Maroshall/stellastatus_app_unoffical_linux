@@ -1,0 +1,41 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+// 렌더러(웹 UI)에 노출되는 안전한 API. window.stella 로 접근한다.
+contextBridge.exposeInMainWorld('stella', {
+  // 멤버 상태
+  getMembers: () => ipcRenderer.invoke('members:get'),
+  refresh: () => ipcRenderer.invoke('members:refresh'),
+  onMembers: (cb) => sub('members:update', cb),
+  onPolling: (cb) => sub('members:polling', cb),
+  onError: (cb) => sub('members:error', cb),
+  onLive: (cb) => sub('members:live', cb),
+
+  // 스케줄(뱅온 정보)
+  getTodaySchedule: () => ipcRenderer.invoke('schedule:today'),
+  getArtistSchedule: (key) => ipcRenderer.invoke('schedule:artist', key),
+
+  // 설정
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
+
+  // 외부 링크 / 창 제어
+  openExternal: (url) => ipcRenderer.invoke('open:external', url),
+  minimize: () => ipcRenderer.send('window:minimize'),
+  maximizeToggle: () => ipcRenderer.send('window:maximize-toggle'),
+  close: () => ipcRenderer.send('window:close'),
+  hide: () => ipcRenderer.send('window:hide'),
+  onMaximized: (cb) => sub('window:maximized', cb),
+
+  // 업데이트
+  getVersion: () => ipcRenderer.invoke('app:version'),
+  uninstall: () => ipcRenderer.invoke('app:uninstall'),
+  checkUpdate: () => ipcRenderer.invoke('update:check'),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
+  onUpdateStatus: (cb) => sub('update:status', cb),
+});
+
+function sub(channel, cb) {
+  const listener = (_e, payload) => cb(payload);
+  ipcRenderer.on(channel, listener);
+  return () => ipcRenderer.removeListener(channel, listener);
+}

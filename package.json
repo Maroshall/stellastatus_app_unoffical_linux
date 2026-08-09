@@ -1,0 +1,35 @@
+{
+  "name": "stellastatus-app",
+  "productName": "스텔라상태",
+  "version": "1.0.0",
+  "description": "스텔라이브 멤버의 치지직 방송 상태를 확인하고 윈도우 알림을 보내주는 데스크톱 앱",
+  "author": {
+    "name": "StellaStatus",
+    "email": "shinyeongeun@gmail.com"
+  },
+  "license": "MIT",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "gen-icon": "node scripts/gen-icon.mjs",
+    "gen-logos": "node scripts/normalize-logos.mjs",
+    "gen-art": "node scripts/gen-installer-art.mjs",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "build-setup": "node scripts/build-setup.mjs",
+    "release": "electron-builder --publish always"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "stellastatus": "^0.1.0"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tabiluv/stellastatus_app.git"
+  }
+}

@@ -1,0 +1,31 @@
+appId: com.stellastatus.installer
+productName: 스텔라상태 Setup
+copyright: Copyright © 2026 스텔라리움
+
+directories:
+  output: ../dist-installer
+  buildResources: build
+
+files:
+  - src/**/*
+  - renderer/**/*
+  - package.json
+
+# 설치할 앱 본체(메인 앱 win-unpacked)를 동봉
+extraResources:
+  - from: payload
+    to: payload
+
+asar: true
+
+win:
+  target:
+    - target: portable
+      arch:
+        - x64
+  icon: build/icon.ico
+
+portable:
+  artifactName: 스텔라상태 Setup.exe
+  # 실행 시 압축 해제 없이 바로 실행되는 자체 완결형 exe
+  unpackDirName: StellaStatusSetup

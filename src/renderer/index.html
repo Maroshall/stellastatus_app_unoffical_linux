@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'" />
+  <title>스텔라상태</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- 배경(단색) -->
+  <div class="sky"></div>
+
+  <!-- 인앱 알림(플로팅 토스트) -->
+  <div class="toast-host" id="toasts"></div>
+
+  <!-- 커스텀 타이틀바 -->
+  <header class="titlebar">
+    <div class="tb-left">
+      <div class="brand">
+        <img class="brand-logo" src="assets/logo.png" alt="" />
+        <span class="brand-name">스텔라<b>상태</b></span>
+      </div>
+    </div>
+    <div class="tb-drag"></div>
+    <div class="tb-right">
+      <button class="icon-btn" id="btnRefresh" title="새로고침"></button>
+      <button class="icon-btn" id="btnSettings" title="설정"></button>
+      <span class="tb-sep"></span>
+      <button class="win-btn" id="winMin" title="최소화"></button>
+      <button class="win-btn" id="winMax" title="최대화"></button>
+      <button class="win-btn win-close" id="winClose" title="닫기"></button>
+    </div>
+  </header>
+
+  <main class="content">
+    <!-- 히어로 -->
+    <section class="hero">
+      <div>
+        <p class="hero-eyebrow">STELLA STATUS · 스텔라이브 방송 알리미</p>
+        <h1 class="hero-title" id="heroTitle">지금, 어떤 <b>스텔라</b>를 만나볼까요?</h1>
+      </div>
+      <div class="live-summary" id="liveSummary">
+        <span class="ls-dot"></span>
+        <span id="liveSummaryText">불러오는 중…</span>
+      </div>
+    </section>
+
+    <!-- 필터 바 -->
+    <section class="toolbar">
+      <div class="search">
+        <span class="s-ico" id="searchIcon"></span>
+        <input id="searchInput" type="text" placeholder="스텔라 이름으로 검색…" />
+      </div>
+      <div class="pills" id="filterPills">
+        <button class="pill active" data-filter="all">전체</button>
+        <button class="pill" data-filter="live"><span class="pill-live-dot"></span>방송중</button>
+        <button class="pill" data-filter="gen1">에버리스</button>
+        <button class="pill" data-filter="gen2">유니버스</button>
+        <button class="pill" data-filter="gen3">클리셰</button>
+      </div>
+    </section>
+
+    <!-- 멤버(세로 스크롤 그리드) -->
+    <section class="members">
+      <div class="grid" id="memberScroll"></div>
+    </section>
+
+    <!-- 오늘의 뱅온(시작 시 1회) -->
+    <section class="schedule">
+      <div class="section-head">
+        <h2>오늘의 뱅온 <span class="src">· StelLight</span></h2>
+      </div>
+      <div class="h-scroll sched-strip" id="schedStrip">
+        <div class="sched-empty">스케줄을 불러오는 중…</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 설정 모달(사이드바) -->
+  <div class="modal-backdrop" id="settingsModal" hidden>
+    <div class="modal settings-modal">
+      <aside class="settings-nav">
+        <div class="settings-nav-head">설정</div>
+        <button class="nav-item active" data-tab="general"><span class="ni-ico" data-icon="sliders"></span>일반</button>
+        <button class="nav-item" data-tab="notify"><span class="ni-ico" data-icon="bell"></span>알림</button>
+        <button class="nav-item" data-tab="info"><span class="ni-ico" data-icon="info"></span>정보</button>
+        <button class="nav-item nav-contact" id="btnContact"><span class="ni-ico" data-icon="mail"></span>문의하기</button>
+      </aside>
+
+      <div class="settings-main">
+        <button class="icon-btn settings-close" id="closeSettings"></button>
+
+        <!-- 일반 -->
+        <section class="tab-panel" data-panel="general">
+          <div class="setting-row">
+            <div><div class="s-title">확인 주기</div><div class="s-desc">방송 상태를 확인하는 간격입니다.</div></div>
+            <select id="setInterval">
+              <option value="30">30초</option>
+              <option value="60">1분</option>
+              <option value="120">2분</option>
+              <option value="300">5분</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <div><div class="s-title">썸네일 표시</div><div class="s-desc">방송 중인 카드에 미리보기를 표시합니다.</div></div>
+            <label class="switch"><input type="checkbox" id="setThumbs"><span></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="s-title">닫을 때 트레이로 최소화</div><div class="s-desc">X 를 눌러도 트레이에서 계속 실행됩니다.</div></div>
+            <label class="switch"><input type="checkbox" id="setTray"><span></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="s-title">윈도우 시작 시 자동 실행</div><div class="s-desc">부팅 시 트레이에서 자동으로 시작합니다.</div></div>
+            <label class="switch"><input type="checkbox" id="setStartup"><span></span></label>
+          </div>
+        </section>
+
+        <!-- 알림 -->
+        <section class="tab-panel" data-panel="notify" hidden>
+          <div class="setting-row">
+            <div><div class="s-title">윈도우 알림</div><div class="s-desc">방송이 시작되면 윈도우 알림을 보냅니다.</div></div>
+            <label class="switch"><input type="checkbox" id="setNotify"><span></span></label>
+          </div>
+          <div class="setting-block">
+            <div class="s-title">알림 받을 스텔라</div>
+            <div class="s-desc">체크한 스텔라의 방송 시작만 알림을 받습니다.</div>
+            <div class="sub-list" id="subList"></div>
+          </div>
+
+          <div class="setting-row">
+            <div><div class="s-title">방송 시작 시 브라우저로 열기</div><div class="s-desc">방송이 시작되면 시스템 기본 웹브라우저로 자동으로 엽니다.</div></div>
+            <label class="switch"><input type="checkbox" id="setAutoOpen"><span></span></label>
+          </div>
+          <div class="setting-block">
+            <div class="s-title">브라우저로 열 스텔라</div>
+            <div class="s-desc">체크한 스텔라의 방송만 브라우저로 엽니다.</div>
+            <div class="sub-list" id="autoOpenList"></div>
+          </div>
+        </section>
+
+        <!-- 정보 -->
+        <section class="tab-panel" data-panel="info" hidden>
+          <div class="about">
+            <img class="about-logo" src="assets/logo.png" alt="" />
+            <div class="about-name">스텔라<b>상태</b></div>
+            <div class="about-ver">버전 <span id="appVersion">–</span></div>
+            <div class="about-made">Made by 스텔라리움</div>
+            <button class="mini-btn about-update" id="btnCheckUpdate">업데이트 확인</button>
+          </div>
+
+          <div class="section-label">데이터 출처</div>
+          <div class="lib-list">
+            <div class="lib-link" data-url="https://chzzk.naver.com">
+              <div><div class="lib-name">치지직 (CHZZK)</div><div class="lib-desc">방송 상태</div></div>
+              <span class="ext-ico" data-icon="external"></span>
+            </div>
+            <div class="lib-link" data-url="https://stellight.fans">
+              <div><div class="lib-name">StelLight</div><div class="lib-desc">방송 스케줄(뱅온)</div></div>
+              <span class="ext-ico" data-icon="external"></span>
+            </div>
+          </div>
+
+          <div class="section-label">사용된 라이브러리</div>
+          <div class="lib-list">
+            <div class="lib-link" data-url="https://github.com/tabiluv/stellastatus">
+              <div><div class="lib-name">stellastatus</div><div class="lib-desc">스텔라이브 방송 상태·스케줄 조회</div></div>
+              <span class="ext-ico" data-icon="external"></span>
+            </div>
+            <div class="lib-link" data-url="https://github.com/electron/electron">
+              <div><div class="lib-name">Electron</div><div class="lib-desc">데스크톱 앱 프레임워크</div></div>
+              <span class="ext-ico" data-icon="external"></span>
+            </div>
+            <div class="lib-link" data-url="https://github.com/electron-userland/electron-builder">
+              <div><div class="lib-name">electron-builder</div><div class="lib-desc">설치 파일 빌드·배포</div></div>
+              <span class="ext-ico" data-icon="external"></span>
+            </div>
+            <div class="lib-link" data-url="https://github.com/electron-userland/electron-builder/tree/master/packages/electron-updater">
+              <div><div class="lib-name">electron-updater</div><div class="lib-desc">자동 업데이트</div></div>
+              <span class="ext-ico" data-icon="external"></span>
+            </div>
+            <div class="lib-link" data-url="https://github.com/sindresorhus/electron-store">
+              <div><div class="lib-name">electron-store</div><div class="lib-desc">설정 저장</div></div>
+              <span class="ext-ico" data-icon="external"></span>
+            </div>
+            <div class="lib-link" data-url="https://github.com/lucide-icons/lucide">
+              <div><div class="lib-name">Lucide</div><div class="lib-desc">아이콘 팩</div></div>
+              <span class="ext-ico" data-icon="external"></span>
+            </div>
+          </div>
+
+          <div class="section-label">앱 관리</div>
+          <div class="setting-row">
+            <div><div class="s-title">스텔라상태 제거</div><div class="s-desc">이 컴퓨터에서 앱과 바로가기를 삭제합니다.</div></div>
+            <button class="mini-btn danger" id="btnUninstall">제거</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

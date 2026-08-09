@@ -1,0 +1,57 @@
+appId: com.stellastatus.app
+productName: 스텔라상태
+copyright: Copyright © 2026 StellaStatus
+
+directories:
+  output: dist
+  buildResources: build
+
+# 앱에 포함할 파일
+files:
+  - src/**/*
+  - build/icon.png
+  - build/icon.ico
+  - "!**/*.map"
+  - package.json
+
+# ESM 라이브러리(stellastatus)와 그 의존성이 node_modules 에 포함되도록 asar 사용
+asar: true
+
+# ── Windows 설치 파일(NSIS) ────────────────────────────────
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.png
+  # 실행 파일에 표기될 정보
+  legalTrademarks: StellaStatus
+
+nsis:
+  oneClick: false                 # 설치 도우미(마법사) 표시
+  perMachine: false               # 사용자 단위 설치(관리자 권한 불필요)
+  # 설치 위치 선택은 커스텀 다크 페이지(build/installer.nsh)로 직접 제공
+  allowToChangeInstallationDirectory: false
+  allowElevation: true
+  createDesktopShortcut: true     # 바탕화면 바로가기
+  createStartMenuShortcut: true   # 시작 메뉴 바로가기
+  shortcutName: 스텔라상태
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  # 브랜드 이미지(다크 + 벨 로고). scripts/gen-installer-art.mjs 로 생성.
+  installerHeader: build/installerHeader.bmp
+  installerSidebar: build/installerSidebar.bmp
+  uninstallerSidebar: build/uninstallerSidebar.bmp
+  warningsAsErrors: false
+  include: build/installer.nsh
+
+# ── 자동 업데이트(GitHub Releases) ─────────────────────────
+# 배포 전 owner/repo 를 본인 저장소로 바꾸세요.
+publish:
+  provider: github
+  owner: tabiluv
+  repo: stellastatus_app
+  releaseType: release

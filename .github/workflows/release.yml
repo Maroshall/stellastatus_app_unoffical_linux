@@ -1,0 +1,37 @@
+name: Release
+
+# v* 태그를 푸시하면(예: v1.0.0) 커스텀 인스톨러(스텔라상태 Setup.exe)를 빌드해
+# GitHub Releases 에 업로드한다. 앱의 자체 업데이터가 이 릴리스를 확인해 업데이트한다.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build custom installer (스텔라상태 Setup.exe)
+        run: npm run build-setup
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-installer/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

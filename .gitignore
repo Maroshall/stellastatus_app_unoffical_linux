@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-installer/
+installer/node_modules/
+installer/payload/
+*.log
+.DS_Store
+Thumbs.db
