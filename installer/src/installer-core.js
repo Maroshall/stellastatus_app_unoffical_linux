@@ -1,7 +1,9 @@
 // 스텔라상태 커스텀 인스톨러 — 설치/제거 핵심 로직 (per-user, 관리자 권한 불필요)
 const { app, shell } = require('electron');
-const fs = require('fs');
-const fsp = require('fs/promises');
+// original-fs 는 Electron 의 asar 패치가 적용되지 않은 원본 fs.
+// 이걸 써야 app.asar 를 (가상 폴더가 아니라) 파일 하나로 복사한다.
+const fs = require('original-fs');
+const fsp = fs.promises;
 const path = require('path');
 const { execFile } = require('child_process');
 
