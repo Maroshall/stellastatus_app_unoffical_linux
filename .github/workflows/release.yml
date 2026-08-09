@@ -1,7 +1,8 @@
 name: Release
 
-# v* 태그를 푸시하면(예: v1.0.0) 커스텀 인스톨러(스텔라상태 Setup.exe)를 빌드해
-# GitHub Releases 에 업로드한다. 앱의 자체 업데이터가 이 릴리스를 확인해 업데이트한다.
+# v* 태그를 푸시하면(예: v1.0.0) 커스텀 인스톨러(스텔라상태 Setup.exe)를 빌드하고
+# RELEASE_NOTES.md 를 본문으로 하는 GitHub Release 를 만들어 업로드한다.
+# 앱의 자체 업데이터가 이 릴리스를 확인해 업데이트한다.
 on:
   push:
     tags:
@@ -29,9 +30,14 @@ jobs:
       - name: Build custom installer (스텔라상태 Setup.exe)
         run: npm run build-setup
 
-      - name: Upload to GitHub Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          name: 스텔라상태 ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
           files: dist-installer/*.exe
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
