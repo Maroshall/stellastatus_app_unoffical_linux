@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('stella', {
 
   // 업데이트
   getVersion: () => ipcRenderer.invoke('app:version'),
+  getChangelog: () => ipcRenderer.invoke('app:changelog'),
   uninstall: () => ipcRenderer.invoke('app:uninstall'),
   checkUpdate: () => ipcRenderer.invoke('update:check'),
   installUpdate: () => ipcRenderer.invoke('update:install'),

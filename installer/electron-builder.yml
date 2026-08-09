@@ -27,5 +27,5 @@ win:
 
 portable:
   artifactName: 스텔라상태 Setup.exe
-  # 실행 시 압축 해제 없이 바로 실행되는 자체 완결형 exe
-  unpackDirName: StellaStatusSetup
+  # unpackDirName 을 지정하지 않으면 매 빌드마다 고유한 임시 폴더로 추출되어
+  # 예전/손상된 추출본이 재사용되는 문제를 방지한다.

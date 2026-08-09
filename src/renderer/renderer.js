@@ -33,6 +33,7 @@
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
     checkmark: '<path d="M20 6 9 17l-5-5"/>',
     mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
     sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
   };
   const FILLED = new Set(['play']);
@@ -64,6 +65,61 @@
     return L > 0.62 ? '#1c1720' : '#ffffff';
   }
 
+  // 시각 파싱(KST 고정) — 치지직/StelLight 값은 타임존 표기가 없는 한국 시각(UTC+9)이므로
+  // PC 시간대와 무관하게 KST 벽시계로 해석해 절대시간(UTC ms)으로 변환한다.
+  const KST_OFFSET = 9 * 60 * 60 * 1000;
+  function parseOpen(d) {
+    if (!d) return null;
+    const s = String(d).trim();
+    // 이미 타임존(Z 또는 +hh:mm)이 있으면 그대로 절대시간으로 파싱
+    if (/([zZ]|[+-]\d{2}:?\d{2})$/.test(s)) {
+      const ms = Date.parse(s.replace(' ', 'T'));
+      return Number.isNaN(ms) ? null : ms;
+    }
+    const m = /(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/.exec(s);
+    if (!m) { const ms = Date.parse(s.replace(' ', 'T')); return Number.isNaN(ms) ? null : ms; }
+    return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) - KST_OFFSET;
+  }
+  function fmtUptime(openMs) {
+    if (!openMs) return '';
+    const diff = Date.now() - openMs;
+    if (diff < 0) return '';
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return '방금 시작';
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return h > 0 ? `${h}시간 ${m}분째` : `${m}분째`;
+  }
+
+  // 간단 마크다운 → HTML (릴리스 노트용). 입력은 먼저 이스케이프하여 XSS 방지.
+  function mdToHtml(src) {
+    const lines = String(src || '').replace(/\r\n/g, '\n').split('\n');
+    const out = [];
+    let list = null;
+    const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };
+    const inline = (t) => {
+      t = esc(t);
+      t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+      t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, txt, url) => `<a class="md-link" data-url="${esc(url)}">${txt}</a>`);
+      return t;
+    };
+    for (const raw of lines) {
+      const line = raw.trimEnd();
+      if (!line.trim()) { closeList(); continue; }
+      let m;
+      if ((m = /^###\s+(.*)/.exec(line))) { closeList(); out.push(`<h4>${inline(m[1])}</h4>`); continue; }
+      if ((m = /^##\s+(.*)/.exec(line))) { closeList(); out.push(`<h3>${inline(m[1])}</h3>`); continue; }
+      if ((m = /^#\s+(.*)/.exec(line))) { closeList(); out.push(`<h2>${inline(m[1])}</h2>`); continue; }
+      if (/^(-{3,}|={3,})$/.test(line)) { closeList(); out.push('<hr>'); continue; }
+      if ((m = /^\s*[-*]\s+(.*)/.exec(line))) { if (list !== 'ul') { closeList(); out.push('<ul>'); list = 'ul'; } out.push(`<li>${inline(m[1])}</li>`); continue; }
+      if ((m = /^\s*\d+\.\s+(.*)/.exec(line))) { if (list !== 'ol') { closeList(); out.push('<ol>'); list = 'ol'; } out.push(`<li>${inline(m[1])}</li>`); continue; }
+      closeList();
+      out.push(`<p>${inline(line)}</p>`);
+    }
+    closeList();
+    return out.join('');
+  }
+
   // CSP(script-src 'self')에서 인라인 onerror 가 막히므로 폴백은 JS 로 연결한다.
   function wireImgFallback(img, fallback) {
     img.addEventListener('error', function handler() {
@@ -90,9 +146,11 @@
       ? `<img class="mthumb" src="${esc(m.thumbnail)}" alt="">`
       : `<div class="thumb-logo">${logoInner}</div>`;
 
+    const openMs = m.isLive ? parseOpen(m.openDate) : null;
     const badge = m.isLive
       ? `<span class="live-badge"><span class="b-dot"></span>LIVE</span>
-         ${m.viewerCount != null ? `<span class="viewers">${icon('eye', 13)} ${nfmt(m.viewerCount)}</span>` : ''}`
+         ${m.viewerCount != null ? `<span class="viewers">${icon('eye', 13)} ${nfmt(m.viewerCount)}</span>` : ''}
+         ${openMs ? `<span class="live-elapsed" data-open="${openMs}">${icon('clock', 12)} ${esc(fmtUptime(openMs))}</span>` : ''}`
       : `<span class="offline-tag">OFFLINE</span>`;
 
     const avatar = m.avatar
@@ -228,44 +286,59 @@
     return m ? m.isLive : false;
   }
 
-  async function loadScheduleOnce() {
+  async function loadSchedule() {
     const data = await api.getTodaySchedule();
-    if (data && data.error) { state.scheduleItems = 'error'; renderSchedule(); return; }
+    if (data && data.error) { state.scheduleItems = 'error'; renderSchedule(true); return; }
     let items = Array.isArray(data) ? data : [];
     // 강지(스텔라이브 멤버 아님) 제외
     state.scheduleItems = items.filter((it) => !/강지/.test(it.stellarName || ''));
-    renderSchedule();
-    state._schedSig = liveSignature();
+    renderSchedule(true);
   }
 
-  const liveSignature = () => state.members.filter((m) => m.isLive).map((m) => m.key).sort().join(',');
+  // 뱅온 항목을 현재 시각 + 라이브 상태로 분류(재요청 없이 앱에서 계산)
+  function classifyScheduleRows() {
+    const items = state.scheduleItems;
+    if (!Array.isArray(items)) return null;
+    const now = Date.now();
+    // 방송 중 → '시작됨', 시간이 지났고 오프라인(방송 꺼짐) → '종료'. 둘 다 맨 뒤 + 흐리게.
+    return items
+      .map((it) => {
+        const rest = isRest(it.title);
+        const t = parseOpen(it.startDateTime) ?? Infinity; // KST 기준 절대시간
+        const live = !rest && scheduleMemberLive(it);
+        const ended = !rest && !live && t < now;
+        return { it, t, rest, live, ended, done: live || ended };
+      })
+      .sort((a, b) => (a.done !== b.done ? (a.done ? 1 : -1) : a.t - b.t));
+  }
+  const scheduleSig = (rows) => rows.map((r) => `${r.it.stellarName}|${r.t}|${r.live ? 'L' : r.ended ? 'E' : '-'}`).join(';');
 
-  function renderSchedule() {
+  function renderSchedule(force = false) {
     const strip = $('#schedStrip');
     if (state.scheduleItems === 'error') { strip.innerHTML = `<div class="sched-error">스케줄을 불러오지 못했어요.</div>`; return; }
     const items = state.scheduleItems;
     if (!Array.isArray(items)) return; // 아직 로드 전
     if (!items.length) { strip.innerHTML = `<div class="sched-empty">오늘 등록된 뱅온 정보가 없어요.</div>`; return; }
 
-    const now = Date.now();
-    // 이미 시작한 방송(시간이 지났거나, 예정 시각 전이라도 이미 라이브 중)은 시작 처리 + 맨 뒤로
-    const rows = items
-      .map((it) => {
-        const rest = isRest(it.title);
-        const t = new Date(it.startDateTime).getTime();
-        const started = !rest && (scheduleMemberLive(it) || t < now);
-        return { it, t, rest, started };
-      })
-      .sort((a, b) => (a.started !== b.started ? (a.started ? 1 : -1) : a.t - b.t));
+    const rows = classifyScheduleRows();
+    const sig = scheduleSig(rows);
+    // 분류(시작/종료/순서)가 실제로 바뀔 때만 다시 그린다(마퀴 애니메이션 리셋 방지).
+    if (!force && sig === state._schedSig) return;
+    state._schedSig = sig;
 
     strip.innerHTML = '';
-    rows.forEach(({ it, rest, started }) => {
+    rows.forEach(({ it, rest, live, ended, done }) => {
+      const badge = live
+        ? '<span class="sched-started">시작됨</span>'
+        : ended
+          ? '<span class="sched-started ended">종료</span>'
+          : '';
       const card = document.createElement('div');
-      card.className = 'sched-card' + (started ? ' past' : '');
+      card.className = 'sched-card' + (done ? ' past' : '');
       card.innerHTML = `
         <div class="sched-time-row">
           <span class="sched-time ${rest ? 'rest' : ''}">${rest ? '휴방' : (it.isFixedTime ? timeLabel(it.startDateTime) : timeLabel(it.startDateTime) + '~')}</span>
-          ${started ? '<span class="sched-started">시작됨</span>' : ''}
+          ${badge}
         </div>
         <div class="sched-name">${esc(it.stellarName)}</div>
         ${it.title && !rest ? `<div class="sched-title"><span class="stt">${esc(it.title)}</span></div>` : ''}`;
@@ -362,11 +435,6 @@
     $('#settingsModal').addEventListener('click', (e) => { if (e.target.id === 'settingsModal') closeSettings(); });
     document.querySelectorAll('.nav-item[data-tab]').forEach((n) => n.addEventListener('click', () => switchTab(n.dataset.tab)));
 
-    // 문의하기 → 기본 메일 클라이언트로 이메일 작성
-    $('#btnContact').addEventListener('click', () =>
-      openLink('mailto:contact@stellarium.kr?subject=' + encodeURIComponent('[스텔라상태] 문의')),
-    );
-
     // 라이브러리/출처 링크
     document.querySelectorAll('.lib-link').forEach((el) => el.addEventListener('click', () => openLink(el.dataset.url)));
 
@@ -387,7 +455,7 @@
     state.updateInfo = info;
     $('#umVersion').textContent = 'v' + (info.version || '');
     $('#umRepo').textContent = info.repo || '';
-    $('#umNotes').textContent = info.notes || '(변경 내용 없음)';
+    $('#umNotes').innerHTML = mdToHtml(info.notes || '(변경 내용 없음)');
     $('#umBadge').innerHTML = icon('download', 24);
     // 강제 업데이트: 취소 불가
     $('#umRequired').hidden = !info.mandatory;
@@ -418,13 +486,18 @@
     $('#umInstall').disabled = false;
   }
 
+  let checkingToastClose = null;
+  function closeChecking() { if (checkingToastClose) { checkingToastClose(); checkingToastClose = null; } }
+
   function handleUpdate(payload) {
     const manual = state.manualUpdateCheck;
     switch (payload.state) {
       case 'checking':
-        if (manual) showToast({ icon: 'refresh', title: '업데이트를 확인하는 중…', duration: 2500, spin: true });
+        // 결과가 나오면 닫히도록 지속(duration 0). 자동 확인 때는 표시하지 않음.
+        if (manual) checkingToastClose = showToast({ icon: 'refresh', title: '업데이트를 확인하는 중…', duration: 0, spin: true });
         break;
       case 'available':
+        closeChecking();
         openUpdateModal(payload);
         state.manualUpdateCheck = false;
         break;
@@ -432,19 +505,23 @@
         if (!$('#updateModal').hidden) setUpdateProgress(payload.percent);
         break;
       case 'downloaded':
+        closeChecking();
         if ($('#updateModal').hidden) openUpdateModal(payload);
         updateReady();
         state.manualUpdateCheck = false;
         break;
       case 'none':
+        closeChecking();
         if (manual) showToast({ icon: 'check', title: '현재 최신 버전이에요', duration: 3500 });
         state.manualUpdateCheck = false;
         break;
       case 'dev':
+        closeChecking();
         if (manual) showToast({ icon: 'alert', title: '개발 모드에서는 업데이트를 확인할 수 없어요', duration: 4000 });
         state.manualUpdateCheck = false;
         break;
       case 'error':
+        closeChecking();
         showToast({ icon: 'alert', title: '업데이트를 확인할 수 없어요', desc: manual ? '네트워크나 배포 설정을 확인해 주세요.' : '', duration: 5000 });
         state.manualUpdateCheck = false;
         break;
@@ -460,6 +537,54 @@
     $('#umLater').addEventListener('click', closeUpdateModal);
     $('#updateModal').addEventListener('click', (e) => { if (e.target.id === 'updateModal') closeUpdateModal(); });
     $('#umLink').addEventListener('click', () => state.updateInfo && openLink(state.updateInfo.htmlUrl));
+  }
+
+  // ── 공용 모달 열기/닫기(애니메이션) ───────────
+  function openModalEl(sel) { const m = $(sel); m.hidden = false; void m.offsetHeight; m.classList.add('open'); }
+  function closeModalEl(sel) { const m = $(sel); m.classList.remove('open'); setTimeout(() => (m.hidden = true), 240); }
+
+  // ── 문의하기(이메일 · GitHub 이슈 · X) ────────
+  function wireContact() {
+    const CONTACT = {
+      email: 'mailto:contact@stellarium.kr?subject=' + encodeURIComponent('[스텔라상태] 문의'),
+      github: 'https://github.com/tabiluv/stellastatus_app/issues/new',
+      x: 'https://x.com/tabi_1uv',
+    };
+    const xSub = $('#coXsub'); if (xSub) xSub.textContent = '@tabi_1uv';
+    $('#btnContact').addEventListener('click', () => openModalEl('#contactModal'));
+    $('#closeContact').addEventListener('click', () => closeModalEl('#contactModal'));
+    $('#contactModal').addEventListener('click', (e) => { if (e.target.id === 'contactModal') closeModalEl('#contactModal'); });
+    document.querySelectorAll('.contact-opt').forEach((b) =>
+      b.addEventListener('click', () => { openLink(CONTACT[b.dataset.contact]); closeModalEl('#contactModal'); }),
+    );
+  }
+
+  // ── 업데이트 기록 ────────────────────────────
+  async function openChangelog() {
+    openModalEl('#changelogModal');
+    const host = $('#clList');
+    host.innerHTML = '<div class="cl-empty">불러오는 중…</div>';
+    const [cur, rels] = await Promise.all([api.getVersion(), api.getChangelog()]);
+    if (!rels || !rels.length) { host.innerHTML = '<div class="cl-error">업데이트 기록을 불러오지 못했어요.</div>'; return; }
+    host.innerHTML = '';
+    rels.forEach((r) => {
+      const isCur = r.version === cur;
+      const el = document.createElement('div');
+      el.className = 'cl-item' + (isCur ? ' current' : '');
+      el.innerHTML = `
+        <div class="cl-ver-row">
+          <span class="cl-ver">v${esc(r.version)}</span>
+          ${isCur ? '<span class="cl-now">현재</span>' : ''}
+          <span class="cl-date">${esc(r.date || '')}</span>
+        </div>
+        <div class="cl-notes">${mdToHtml(r.notes || '(변경 내용 없음)')}</div>`;
+      host.appendChild(el);
+    });
+  }
+  function wireChangelog() {
+    $('#btnChangelog').addEventListener('click', openChangelog);
+    $('#closeChangelog').addEventListener('click', () => closeModalEl('#changelogModal'));
+    $('#changelogModal').addEventListener('click', (e) => { if (e.target.id === 'changelogModal') closeModalEl('#changelogModal'); });
   }
 
   // ── 가로 스크롤(휠/드래그, 스크롤바 숨김) ──────
@@ -515,6 +640,8 @@
     setIcon('#winMax', 'square', 13);
     setIcon('#winClose', 'x', 14);
     setIcon('#closeSettings', 'x', 14);
+    setIcon('#closeContact', 'x', 14);
+    setIcon('#closeChangelog', 'x', 14);
     // data-icon 속성이 있는 요소(설정 사이드바, 링크 등) 일괄 채우기
     document.querySelectorAll('[data-icon]').forEach((el) => (el.innerHTML = icon(el.dataset.icon, 16)));
   }
@@ -529,11 +656,27 @@
     wireWindowControls();
     wireSettings();
     wireUpdateModal();
+    wireContact();
+    wireChangelog();
 
     state.settings = await api.getSettings();
     state.members = (await api.getMembers()) || [];
     render();
-    loadScheduleOnce(); // 뱅온은 시작 시 1회만
+    loadSchedule(); // 뱅온은 시작 시 1회 + 이후 1시간마다 재조회
+    setInterval(loadSchedule, 60 * 60 * 1000);
+    // 시간이 지나며 시작/종료가 바뀌는 것을 앱이 주기적으로 재판정(재요청 없음, 변화 있을 때만 다시 그림)
+    setInterval(() => renderSchedule(), 30000);
+    // 라이브 카드의 방송 경과 시간 1분마다 갱신(전체 리렌더 없이 텍스트만)
+    setInterval(() => {
+      document.querySelectorAll('.live-elapsed[data-open]').forEach((el) => {
+        el.innerHTML = icon('clock', 12) + ' ' + esc(fmtUptime(+el.dataset.open));
+      });
+    }, 60000);
+    // 릴리스 노트 등 마크다운 링크 클릭 → 외부 브라우저
+    document.body.addEventListener('click', (e) => {
+      const a = e.target.closest('.md-link');
+      if (a) { e.preventDefault(); openLink(a.dataset.url); }
+    });
 
     api.getVersion().then((v) => ($('#appVersion').textContent = 'v' + v));
 
@@ -541,9 +684,7 @@
       state.members = members || [];
       $('#btnRefresh').querySelector('svg')?.classList.remove('spin');
       render();
-      // 라이브 상태(방송 중 멤버)가 바뀔 때만 뱅온 갱신 → 마퀴 애니메이션 리셋 방지
-      const sig = liveSignature();
-      if (sig !== state._schedSig) { state._schedSig = sig; renderSchedule(); }
+      renderSchedule(); // 라이브 상태 변화 반영(내부에서 변화 있을 때만 다시 그림)
       if (!$('#settingsModal').hidden) {
         buildMemberList('#subList', state.settings.subscribed, saveSubscriptions);
         buildMemberList('#autoOpenList', state.settings.autoOpenList, saveAutoOpen);

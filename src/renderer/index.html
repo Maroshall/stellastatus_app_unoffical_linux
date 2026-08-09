@@ -80,6 +80,7 @@
   <!-- 설정 모달(사이드바) -->
   <div class="modal-backdrop" id="settingsModal" hidden>
     <div class="modal settings-modal">
+      <button class="icon-btn settings-close" id="closeSettings"></button>
       <aside class="settings-nav">
         <div class="settings-nav-head">설정</div>
         <button class="nav-item active" data-tab="general"><span class="ni-ico" data-icon="sliders"></span>일반</button>
@@ -89,7 +90,6 @@
       </aside>
 
       <div class="settings-main">
-        <button class="icon-btn settings-close" id="closeSettings"></button>
 
         <!-- 일반 -->
         <section class="tab-panel" data-panel="general">
@@ -146,7 +146,10 @@
             <div class="about-name">스텔라<b>상태</b></div>
             <div class="about-ver">버전 <span id="appVersion">–</span></div>
             <div class="about-made">Made by 스텔라리움</div>
-            <button class="mini-btn about-update" id="btnCheckUpdate">업데이트 확인</button>
+            <div class="about-btns">
+              <button class="mini-btn" id="btnCheckUpdate">업데이트 확인</button>
+              <button class="mini-btn ghost" id="btnChangelog">업데이트 기록</button>
+            </div>
           </div>
 
           <div class="section-label">데이터 출처</div>
@@ -221,6 +224,35 @@
           <button class="mini-btn" id="umInstall" disabled>지금 설치</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 문의하기 모달 -->
+  <div class="modal-backdrop" id="contactModal" hidden>
+    <div class="modal contact-modal">
+      <button class="icon-btn contact-close" id="closeContact"></button>
+      <div class="cm-head"><h2>문의하기</h2><p>편한 방법으로 문의해 주세요.</p></div>
+      <button class="contact-opt" data-contact="email">
+        <span class="co-ico" data-icon="mail"></span>
+        <div class="co-text"><div class="co-name">이메일</div><div class="co-sub">contact@stellarium.kr</div></div>
+      </button>
+      <button class="contact-opt" data-contact="github">
+        <span class="co-ico" data-icon="info"></span>
+        <div class="co-text"><div class="co-name">GitHub 이슈</div><div class="co-sub">버그 신고 · 기능 제안</div></div>
+      </button>
+      <button class="contact-opt" data-contact="x">
+        <span class="co-ico" data-icon="external"></span>
+        <div class="co-text"><div class="co-name">X (트위터)</div><div class="co-sub" id="coXsub">DM 문의</div></div>
+      </button>
+    </div>
+  </div>
+
+  <!-- 업데이트 기록 모달 -->
+  <div class="modal-backdrop" id="changelogModal" hidden>
+    <div class="modal changelog-modal">
+      <button class="icon-btn changelog-close" id="closeChangelog"></button>
+      <div class="cl-head"><h2>업데이트 기록</h2></div>
+      <div class="cl-list" id="clList"><div class="cl-empty">불러오는 중…</div></div>
     </div>
   </div>
 

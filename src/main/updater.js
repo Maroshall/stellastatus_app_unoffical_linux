@@ -109,4 +109,23 @@ function runInstaller() {
   setTimeout(() => app.quit(), 400);
 }
 
-module.exports = { init, check, runInstaller };
+// 업데이트 기록(릴리스 목록)
+async function getReleases() {
+  if (!OWNER || OWNER === 'YOUR_GITHUB_USERNAME' || !REPO) return [];
+  try {
+    const list = await ghGet(`https://api.github.com/repos/${OWNER}/${REPO}/releases?per_page=20`);
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((r) => !r.draft)
+      .map((r) => ({
+        version: String(r.tag_name || r.name || '').replace(/^v/, ''),
+        notes: (r.body || '').replace(/<!--[\s\S]*?-->/g, '').trim(),
+        date: (r.published_at || r.created_at || '').slice(0, 10),
+        htmlUrl: r.html_url,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+module.exports = { init, check, runInstaller, getReleases };

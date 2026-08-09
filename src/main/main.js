@@ -162,9 +162,30 @@ function notifyLive(member) {
 }
 
 // ── 자동 업데이트 ─────────────────────────────────────────
+let lastNotifiedUpdate = null;
+
+function notifyUpdate(info) {
+  if (!Notification.isSupported()) return;
+  const n = new Notification({
+    title: `새 버전 ${info.version} 업데이트`,
+    body: info.mandatory
+      ? '안정성을 위한 필수 업데이트가 있어요. 클릭해서 업데이트하세요.'
+      : '새로운 업데이트가 있어요. 클릭해서 확인하세요.',
+    icon: ICON_PATH,
+    silent: false,
+  });
+  n.on('click', () => showWindow());
+  n.show();
+}
+
 function setupAutoUpdater() {
   updater.init((payload) => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update:status', payload);
+    // 업데이트가 감지되면 윈도우 알림(버전당 1회)
+    if (payload.state === 'available' && payload.version && payload.version !== lastNotifiedUpdate) {
+      lastNotifiedUpdate = payload.version;
+      notifyUpdate(payload);
+    }
   });
 
   if (!isDev) {
@@ -230,6 +251,7 @@ function registerIpc() {
   });
 
   ipcMain.handle('app:version', () => app.getVersion());
+  ipcMain.handle('app:changelog', () => updater.getReleases());
 
   // 앱 제거 — 설치 폴더의 제거 프로그램 실행
   ipcMain.handle('app:uninstall', async () => {

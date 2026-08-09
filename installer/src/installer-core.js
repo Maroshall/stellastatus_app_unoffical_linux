@@ -52,7 +52,9 @@ function run(cmd, args) {
 // ── 설치 ─────────────────────────────────────
 async function install({ targetDir, desktopShortcut = true, startMenuShortcut = true, update = false, onProgress = () => {} }) {
   const src = payloadDir();
-  if (!fs.existsSync(src)) throw new Error('설치할 앱 데이터를 찾을 수 없습니다: ' + src);
+  if (!fs.existsSync(src) || (await fsp.readdir(src).catch(() => [])).length === 0) {
+    throw new Error('설치 파일이 손상되었거나 보안 프로그램에 의해 일부가 차단되었을 수 있습니다.\n파일을 다시 내려받아 실행해 주세요.');
+  }
   const dest = targetDir || defaultInstallDir();
 
   onProgress({ phase: 'prepare', percent: 0, text: update ? '업데이트를 준비하는 중…' : '설치를 준비하는 중…' });
