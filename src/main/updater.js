@@ -60,6 +60,11 @@ function download(url, dest, onProgress) {
   });
 }
 
+// 릴리스 노트에 <!-- force-update --> 마커가 있으면 강제(취소 불가) 업데이트로 처리
+function isMandatory(body) {
+  return /<!--\s*force-?update\s*-->/i.test(body || '');
+}
+
 // 최신 릴리스 확인 → 새 버전이면 자동 다운로드까지 진행
 async function check({ manual = false } = {}) {
   if (!OWNER || OWNER === 'YOUR_GITHUB_USERNAME' || !REPO) {
@@ -75,23 +80,32 @@ async function check({ manual = false } = {}) {
     const asset = (rel.assets || []).find((a) => /Setup.*\.exe$/i.test(a.name) || /\.exe$/i.test(a.name));
     if (!asset) { emit({ state: 'error', message: '설치 파일을 찾을 수 없습니다.' }); return; }
 
-    emit({ state: 'available', version: latest });
+    const info = {
+      version: String(latest).replace(/^v/, ''),
+      mandatory: isMandatory(rel.body),
+      notes: (rel.body || '').replace(/<!--[\s\S]*?-->/g, '').trim(),
+      repo: `${OWNER}/${REPO}`,
+      htmlUrl: rel.html_url || `https://github.com/${OWNER}/${REPO}/releases/latest`,
+    };
+
+    emit({ state: 'available', ...info });
     const dest = path.join(os.tmpdir(), asset.name);
     await download(asset.browser_download_url, dest, (percent) => emit({ state: 'downloading', percent }));
     downloadedPath = dest;
-    emit({ state: 'downloaded', version: latest });
+    emit({ state: 'downloaded', ...info });
   } catch (e) {
     emit({ state: 'error', message: String(e?.message || e) });
   }
 }
 
-// 받은 Setup.exe 실행 후 앱 종료(설치 파일이 덮어쓴 뒤 재실행)
+// 받은 Setup.exe 를 '업데이트(무인) 모드'로 실행 → 기존 설치 위치에 제자리 덮어쓰기 후 재실행
 function runInstaller() {
   if (!downloadedPath || !fs.existsSync(downloadedPath)) {
     shell.openExternal(`https://github.com/${OWNER}/${REPO}/releases/latest`);
     return;
   }
-  spawn(downloadedPath, [], { detached: true, stdio: 'ignore' }).unref();
+  const installDir = path.dirname(process.execPath);
+  spawn(downloadedPath, ['--update', '--dir', installDir], { detached: true, stdio: 'ignore' }).unref();
   setTimeout(() => app.quit(), 400);
 }
 

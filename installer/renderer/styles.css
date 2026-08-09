@@ -106,3 +106,11 @@ body { font-family: var(--font); color: var(--text); background: var(--bg); over
 .btn.primary:hover { filter: brightness(1.07); color: #1c1720; }
 .btn.primary:disabled { opacity: .5; cursor: default; filter: none; }
 .btn.ghost { }
+
+/* 업데이트(무인) 모드 — 사이드바·버튼바 숨긴 컴팩트 진행 창 */
+.update-mode .side { display: none; }
+.update-mode .actions { display: none; }
+.update-mode .tb-btn { display: none; }
+.update-mode .body { padding: 26px; }
+.update-mode .spin-logo img { width: 54px; height: 54px; }
+.update-mode .bar { width: 300px; }

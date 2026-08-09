@@ -3,15 +3,18 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const core = require('./installer-core');
 
 const isUninstall = process.argv.includes('--uninstall');
+const isUpdate = process.argv.includes('--update');
 const isDev = process.argv.includes('--dev');
+const dirIdx = process.argv.indexOf('--dir');
+const targetDirArg = dirIdx >= 0 ? process.argv[dirIdx + 1] : null;
 let win = null;
 
 app.setAppUserModelId('com.stellastatus.installer');
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 760,
-    height: 540,
+    width: isUpdate ? 460 : 760,
+    height: isUpdate ? 250 : 540,
     resizable: false,
     frame: false,
     backgroundColor: '#1a1418',
@@ -34,10 +37,11 @@ else {
     createWindow();
     win.webContents.once('did-finish-load', () => {
       win.webContents.send('boot', {
-        mode: isUninstall ? 'uninstall' : 'install',
+        mode: isUninstall ? 'uninstall' : isUpdate ? 'update' : 'install',
         appName: core.APP_NAME,
         version: app.getVersion(),
         defaultDir: core.defaultInstallDir(),
+        targetDir: targetDirArg || core.defaultInstallDir(),
       });
     });
   });

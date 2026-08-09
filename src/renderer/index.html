@@ -8,8 +8,8 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- 배경(단색) -->
-  <div class="sky"></div>
+  <!-- 배경 -->
+  <div class="sky"><img class="bg-star" src="assets/logo_star.png" alt=""></div>
 
   <!-- 인앱 알림(플로팅 토스트) -->
   <div class="toast-host" id="toasts"></div>
@@ -195,6 +195,31 @@
             <button class="mini-btn danger" id="btnUninstall">제거</button>
           </div>
         </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- 업데이트 모달 -->
+  <div class="modal-backdrop" id="updateModal" hidden>
+    <div class="modal update-modal">
+      <div class="um-head">
+        <div class="um-badge" id="umBadge"></div>
+        <div class="um-headtext">
+          <div class="um-title">새 버전 <b id="umVersion">–</b> 이 나왔어요</div>
+          <div class="um-source">출처: GitHub · <span id="umRepo"></span> · <a class="um-link" id="umLink">릴리스 보기</a></div>
+        </div>
+      </div>
+      <div class="um-notes" id="umNotes"></div>
+      <div class="um-progress" id="umProgress">
+        <div class="um-bar"><div class="um-bar-fill" id="umBar"></div></div>
+        <div class="um-prog-text" id="umProgText">업데이트를 내려받는 중…</div>
+      </div>
+      <div class="um-foot">
+        <div class="um-required" id="umRequired" hidden>안정성을 위한 필수 업데이트입니다.</div>
+        <div class="um-actions">
+          <button class="mini-btn ghost" id="umLater">나중에</button>
+          <button class="mini-btn" id="umInstall" disabled>지금 설치</button>
+        </div>
       </div>
     </div>
   </div>

@@ -50,12 +50,12 @@ function run(cmd, args) {
 }
 
 // ── 설치 ─────────────────────────────────────
-async function install({ targetDir, desktopShortcut = true, startMenuShortcut = true, onProgress = () => {} }) {
+async function install({ targetDir, desktopShortcut = true, startMenuShortcut = true, update = false, onProgress = () => {} }) {
   const src = payloadDir();
   if (!fs.existsSync(src)) throw new Error('설치할 앱 데이터를 찾을 수 없습니다: ' + src);
   const dest = targetDir || defaultInstallDir();
 
-  onProgress({ phase: 'prepare', percent: 0, text: '설치를 준비하는 중…' });
+  onProgress({ phase: 'prepare', percent: 0, text: update ? '업데이트를 준비하는 중…' : '설치를 준비하는 중…' });
 
   // 실행 중인 앱 종료(재설치 시 파일 잠금 방지)
   await run('taskkill', ['/F', '/IM', APP_EXE, '/T']);
@@ -84,18 +84,20 @@ async function install({ targetDir, desktopShortcut = true, startMenuShortcut = 
   const exePath = path.join(dest, APP_EXE);
   const iconPath = exePath;
 
-  // 바로가기
-  if (desktopShortcut) writeShortcut(path.join(app.getPath('desktop'), `${APP_NAME}.lnk`), exePath, iconPath);
-  if (startMenuShortcut) {
-    const startDir = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs');
-    await fsp.mkdir(startDir, { recursive: true });
-    writeShortcut(path.join(startDir, `${APP_NAME}.lnk`), exePath, iconPath);
+  // 바로가기 (업데이트 시엔 기존 것을 유지하고 새로 만들지 않음)
+  if (!update) {
+    if (desktopShortcut) writeShortcut(path.join(app.getPath('desktop'), `${APP_NAME}.lnk`), exePath, iconPath);
+    if (startMenuShortcut) {
+      const startDir = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs');
+      await fsp.mkdir(startDir, { recursive: true });
+      writeShortcut(path.join(startDir, `${APP_NAME}.lnk`), exePath, iconPath);
+    }
   }
 
-  // 언인스톨 레지스트리(제어판 프로그램 목록)
+  // 언인스톨 레지스트리(제어판 프로그램 목록) — 버전 갱신 포함
   await writeUninstallRegistry(dest, uninstallerPath, exePath);
 
-  onProgress({ phase: 'done', percent: 100, text: '설치가 완료되었습니다.' });
+  onProgress({ phase: 'done', percent: 100, text: update ? '업데이트가 완료되었습니다.' : '설치가 완료되었습니다.' });
   return { installDir: dest, exePath };
 }
 

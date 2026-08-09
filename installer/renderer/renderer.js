@@ -119,8 +119,25 @@
     $('#barFill').style.width = (p.percent || 0) + '%';
     $('#progText').textContent = p.text || '';
     if (state.mode === 'uninstall') $('#progTitle').textContent = '제거하는 중…';
+    else if (state.mode === 'update') $('#progTitle').textContent = p.phase === 'done' ? '업데이트 완료' : '업데이트하는 중…';
     else $('#progTitle').textContent = p.phase === 'done' ? '설치 완료' : '설치하는 중…';
   });
+
+  // 업데이트(무인) 모드 — 기존 설치 위치에 제자리 덮어쓰기 후 재실행
+  async function runUpdate() {
+    $('#progTitle').textContent = '업데이트하는 중…';
+    show('progress');
+    const res = await api.install({ targetDir: state.dir, desktopShortcut: false, startMenuShortcut: false, update: true });
+    if (!res.ok) {
+      $('#progTitle').textContent = '업데이트 실패';
+      $('#progText').textContent = res.error || '알 수 없는 오류';
+      return;
+    }
+    $('#progTitle').textContent = '업데이트 완료';
+    $('#progText').textContent = '새 버전을 실행합니다…';
+    api.launch(res.exePath);
+    setTimeout(() => api.close(), 900);
+  }
 
   api.onBoot((b) => {
     state.mode = b.mode;
@@ -129,6 +146,12 @@
     state.dir = b.defaultDir || '';
     $('#pathInput').value = state.dir;
     $('#verText').textContent = 'v' + state.version;
+    if (b.mode === 'update') {
+      document.body.classList.add('update-mode');
+      state.dir = b.targetDir || b.defaultDir || '';
+      runUpdate();
+      return;
+    }
     if (b.mode === 'uninstall') {
       $('#sideSub').textContent = '제거';
       $('.panel[data-step="welcome"] .p-title').textContent = '스텔라상태 제거';

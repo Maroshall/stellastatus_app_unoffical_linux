@@ -9,6 +9,7 @@
     search: '',
     manualUpdateCheck: false,
     scheduleItems: null,
+    updateInfo: null,
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -381,7 +382,42 @@
     $('#btnUninstall').addEventListener('click', () => api.uninstall());
   }
 
-  // ── 업데이트 상태 → 토스트 ───────────────────
+  // ── 업데이트 모달 ────────────────────────────
+  function openUpdateModal(info) {
+    state.updateInfo = info;
+    $('#umVersion').textContent = 'v' + (info.version || '');
+    $('#umRepo').textContent = info.repo || '';
+    $('#umNotes').textContent = info.notes || '(변경 내용 없음)';
+    $('#umBadge').innerHTML = icon('download', 24);
+    // 강제 업데이트: 취소 불가
+    $('#umRequired').hidden = !info.mandatory;
+    $('#umLater').hidden = !!info.mandatory;
+    // 진행 상태 초기화
+    $('#umBar').style.width = '0%';
+    $('#umProgText').textContent = '업데이트를 내려받는 중…';
+    $('#umProgress').hidden = false;
+    $('#umInstall').disabled = true;
+    const m = $('#updateModal');
+    m.hidden = false;
+    void m.offsetHeight;
+    m.classList.add('open');
+  }
+  function closeUpdateModal() {
+    if (state.updateInfo && state.updateInfo.mandatory) return; // 강제 업데이트는 닫기 불가
+    const m = $('#updateModal');
+    m.classList.remove('open');
+    setTimeout(() => (m.hidden = true), 240);
+  }
+  function setUpdateProgress(percent) {
+    $('#umBar').style.width = (percent || 0) + '%';
+    $('#umProgText').textContent = `업데이트를 내려받는 중… ${percent || 0}%`;
+  }
+  function updateReady() {
+    $('#umBar').style.width = '100%';
+    $('#umProgText').textContent = '설치 준비가 완료되었습니다.';
+    $('#umInstall').disabled = false;
+  }
+
   function handleUpdate(payload) {
     const manual = state.manualUpdateCheck;
     switch (payload.state) {
@@ -389,11 +425,15 @@
         if (manual) showToast({ icon: 'refresh', title: '업데이트를 확인하는 중…', duration: 2500, spin: true });
         break;
       case 'available':
-        showToast({ icon: 'download', title: `새 버전 ${payload.version} 을 내려받고 있어요`, duration: 4000 });
+        openUpdateModal(payload);
         state.manualUpdateCheck = false;
         break;
+      case 'downloading':
+        if (!$('#updateModal').hidden) setUpdateProgress(payload.percent);
+        break;
       case 'downloaded':
-        showToast({ icon: 'download', title: `새 버전 ${payload.version} 준비 완료`, desc: '지금 설치하고 재시작할 수 있어요.', actionLabel: '설치', onAction: () => api.installUpdate(), duration: 0 });
+        if ($('#updateModal').hidden) openUpdateModal(payload);
+        updateReady();
         state.manualUpdateCheck = false;
         break;
       case 'none':
@@ -409,6 +449,17 @@
         state.manualUpdateCheck = false;
         break;
     }
+  }
+
+  function wireUpdateModal() {
+    $('#umInstall').addEventListener('click', () => {
+      $('#umInstall').disabled = true;
+      $('#umInstall').textContent = '설치 중…';
+      api.installUpdate();
+    });
+    $('#umLater').addEventListener('click', closeUpdateModal);
+    $('#updateModal').addEventListener('click', (e) => { if (e.target.id === 'updateModal') closeUpdateModal(); });
+    $('#umLink').addEventListener('click', () => state.updateInfo && openLink(state.updateInfo.htmlUrl));
   }
 
   // ── 가로 스크롤(휠/드래그, 스크롤바 숨김) ──────
@@ -477,6 +528,7 @@
     wireToolbar();
     wireWindowControls();
     wireSettings();
+    wireUpdateModal();
 
     state.settings = await api.getSettings();
     state.members = (await api.getMembers()) || [];
