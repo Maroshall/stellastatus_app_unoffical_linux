@@ -4,6 +4,21 @@
 
   const state = { mode: 'install', step: 'welcome', dir: '', exePath: '', appName: '스텔라상태', version: '' };
 
+  // 아이콘 팩(Lucide, MIT)
+  const ICONS = {
+    minus: '<path d="M5 12h14"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+    download: '<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>',
+  };
+  function icon(name, size = 18, draw = false) {
+    const p = ICONS[name];
+    if (!p) return '';
+    return `<svg class="${draw ? 'ic-draw' : ''}" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  }
+  const setIcon = (sel, name, size) => { const el = $(sel); if (el) el.innerHTML = icon(name, size); };
+
   const INSTALL_STEPS = [
     { key: 'welcome', label: '시작' },
     { key: 'terms', label: '이용약관' },
@@ -26,7 +41,7 @@
     list.forEach((s, i) => {
       const el = document.createElement('div');
       el.className = 'step' + (i === curIdx ? ' active' : '') + (i < curIdx ? ' done' : '');
-      el.innerHTML = `<span class="num">${i < curIdx ? '✓' : i + 1}</span><span>${s.label}</span>`;
+      el.innerHTML = `<span class="num">${i < curIdx ? icon('check', 14) : i + 1}</span><span>${s.label}</span>`;
       host.appendChild(el);
     });
   }
@@ -34,6 +49,7 @@
   function show(step) {
     state.step = step;
     document.querySelectorAll('.panel').forEach((p) => (p.hidden = p.dataset.step !== step));
+    if (step === 'finish') $('#doneBadge').innerHTML = icon('check', 30, true); // 완료 체크 그려지는 애니메이션
     renderSteps();
     updateButtons();
   }
@@ -108,6 +124,9 @@
   $('#optAgree').addEventListener('change', updateButtons);
   $('#btnCancel').addEventListener('click', () => api.close());
   $('#btnClose').addEventListener('click', () => api.close());
+  setIcon('#btnMin', 'minus', 14);
+  setIcon('#btnClose', 'x', 14);
+  $('#btnBrowse').innerHTML = icon('folder', 15) + ' 찾아보기';
   $('#btnMin').addEventListener('click', () => api.minimize());
   $('#madeBy').addEventListener('click', () => api.openExternal('https://github.com'));
   $('#btnBrowse').addEventListener('click', async () => {

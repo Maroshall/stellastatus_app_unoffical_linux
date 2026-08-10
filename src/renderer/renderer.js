@@ -10,6 +10,7 @@
     manualUpdateCheck: false,
     scheduleItems: null,
     updateInfo: null,
+    visibleKeys: new Set(),
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -133,6 +134,7 @@
   function memberCard(m) {
     const card = document.createElement('article');
     card.className = 'card' + (m.isLive ? ' live' : '');
+    card.dataset.key = m.key;
     card.style.setProperty('--card-accent', m.accent);
     card.style.setProperty('--card-accent2', m.accent2);
     card.style.setProperty('--card-ink', inkFor(m.accent));
@@ -212,16 +214,92 @@
     return [...out].sort((a, b) => Number(b.isLive) - Number(a.isLive) || a.gen - b.gen);
   }
 
-  function render() {
+  function render(animate = false) {
+    // 폴링 등 일반 갱신은 전체 다시 그림(애니메이션 없음)
+    if (!animate) { renderNow(false); return; }
+
+    // 필터/검색 전환: 남는 카드는 유지, 나가는 카드만 퇴장, 새 카드만 등장 애니메이션
+    const list = applyFilter(state.members);
+    const newKeySet = new Set(list.map((m) => m.key));
+    const cards = [...grid.querySelectorAll('.card')];
+    const existing = new Map(cards.filter((c) => !c.classList.contains('leave')).map((c) => [c.dataset.key, c]));
+
+    // 1) 나가는 카드: 현재 위치를 고정(absolute)해 레이아웃에서 빼고 애니메이션으로 제거
+    grid.style.position = 'relative';
+    const leaving = cards.filter((c) => !newKeySet.has(c.dataset.key) && !c.classList.contains('leave'));
+    const rects = leaving.map((c) => ({ c, top: c.offsetTop, left: c.offsetLeft, w: c.offsetWidth }));
+    rects.forEach(({ c, top, left, w }) => {
+      c.style.width = w + 'px';
+      c.style.position = 'absolute';
+      c.style.top = top + 'px';
+      c.style.left = left + 'px';
+      c.classList.add('leave');
+      const done = () => c.remove();
+      c.addEventListener('animationend', done, { once: true });
+      setTimeout(done, 320);
+    });
+
+    // 2) 남는 카드는 그대로, 새 카드만 등장 애니메이션으로 생성 → 순서대로 재배치
+    let anim = 0;
+    const ordered = list.map((m) => {
+      const ex = existing.get(m.key);
+      if (ex) {
+        // 그대로 남는 카드: 등장 애니메이션 잔재 제거(재배치 시 다시 실행되는 것 방지)
+        ex.classList.remove('enter');
+        ex.style.animationDelay = '';
+        return ex;
+      }
+      const c = memberCard(m);
+      c.classList.add('enter');
+      c.style.animationDelay = Math.min(anim++ * 0.03, 0.22) + 's';
+      // 등장이 끝나면 enter 클래스 제거 → 이후 재배치돼도 다시 애니메이션되지 않음
+      const onEnd = (e) => {
+        if (e.animationName !== 'card-in') return;
+        c.classList.remove('enter');
+        c.style.animationDelay = '';
+        c.removeEventListener('animationend', onEnd);
+      };
+      c.addEventListener('animationend', onEnd);
+      return c;
+    });
+    ordered.forEach((c) => grid.appendChild(c));
+
+    // 3) 빈 결과 처리
+    const emptyEl = grid.querySelector('.empty-state');
+    if (!list.length) {
+      if (!emptyEl) {
+        const e = document.createElement('div');
+        e.className = 'empty-state';
+        e.textContent = state.members.length ? '조건에 맞는 스텔라가 없어요.' : '스텔라 정보를 불러오는 중…';
+        grid.appendChild(e);
+      }
+    } else if (emptyEl) {
+      emptyEl.remove();
+    }
+
+    state.visibleKeys = newKeySet;
+    updateSummary();
+  }
+
+  function renderNow(animate = false) {
     const list = applyFilter(state.members);
     grid.innerHTML = '';
     if (!list.length) {
       grid.innerHTML = `<div class="empty-state">${state.members.length ? '조건에 맞는 스텔라가 없어요.' : '스텔라 정보를 불러오는 중…'}</div>`;
     } else {
       const frag = document.createDocumentFragment();
-      list.forEach((m) => frag.appendChild(memberCard(m)));
+      let anim = 0; // 새로 나타나는 카드만 순차 애니메이션(그대로 있는 카드는 그대로)
+      list.forEach((m) => {
+        const c = memberCard(m);
+        if (animate && !state.visibleKeys.has(m.key)) {
+          c.classList.add('enter');
+          c.style.animationDelay = Math.min(anim++ * 0.03, 0.22) + 's';
+        }
+        frag.appendChild(c);
+      });
       grid.appendChild(frag);
     }
+    state.visibleKeys = new Set(list.map((m) => m.key));
     updateSummary();
   }
 
@@ -257,8 +335,8 @@
     let closed = false;
     const close = () => {
       if (closed) return; closed = true;
-      t.classList.remove('show');
-      setTimeout(() => t.remove(), 320);
+      t.classList.add('closing'); // 높이/여백 접기 + 페이드 → 아래 토스트가 부드럽게 올라옴
+      setTimeout(() => t.remove(), 340);
     };
     t.querySelector('.t-close').addEventListener('click', (e) => { e.stopPropagation(); close(); });
     const act = t.querySelector('.t-act');
@@ -562,15 +640,33 @@
   // ── 업데이트 기록 ────────────────────────────
   async function openChangelog() {
     openModalEl('#changelogModal');
+    const modal = document.querySelector('.changelog-modal');
     const host = $('#clList');
-    host.innerHTML = '<div class="cl-empty">불러오는 중…</div>';
+    host.innerHTML = '<div class="cl-loading"><span class="cl-spinner"></span><span>불러오는 중…</span></div>';
     const [cur, rels] = await Promise.all([api.getVersion(), api.getChangelog()]);
-    if (!rels || !rels.length) { host.innerHTML = '<div class="cl-error">업데이트 기록을 불러오지 못했어요.</div>'; return; }
-    host.innerHTML = '';
+
+    // FLIP: 로딩 상태 높이 → 내용 채운 뒤 높이로 부드럽게 전환(위·아래로 늘어남)
+    const fromH = modal.getBoundingClientRect().height;
+    if (!rels || !rels.length) {
+      host.innerHTML = '<div class="cl-error">업데이트 기록을 불러오지 못했어요.</div>';
+    } else {
+      host.innerHTML = '';
+      renderChangelogItems(host, rels, cur);
+    }
+    modal.style.height = 'auto';
+    const toH = modal.getBoundingClientRect().height;
+    modal.style.height = fromH + 'px';
+    void modal.offsetHeight; // 리플로우
+    modal.style.height = toH + 'px';
+    setTimeout(() => { modal.style.height = ''; }, 440);
+  }
+
+  function renderChangelogItems(host, rels, cur) {
     rels.forEach((r) => {
       const isCur = r.version === cur;
       const el = document.createElement('div');
       el.className = 'cl-item' + (isCur ? ' current' : '');
+
       el.innerHTML = `
         <div class="cl-ver-row">
           <span class="cl-ver">v${esc(r.version)}</span>
@@ -585,6 +681,11 @@
     $('#btnChangelog').addEventListener('click', openChangelog);
     $('#closeChangelog').addEventListener('click', () => closeModalEl('#changelogModal'));
     $('#changelogModal').addEventListener('click', (e) => { if (e.target.id === 'changelogModal') closeModalEl('#changelogModal'); });
+  }
+  function wireTerms() {
+    $('#btnTerms').addEventListener('click', () => openModalEl('#termsModal'));
+    $('#closeTerms').addEventListener('click', () => closeModalEl('#termsModal'));
+    $('#termsModal').addEventListener('click', (e) => { if (e.target.id === 'termsModal') closeModalEl('#termsModal'); });
   }
 
   // ── 가로 스크롤(휠/드래그, 스크롤바 숨김) ──────
@@ -616,10 +717,10 @@
       document.querySelectorAll('.pill').forEach((x) => x.classList.remove('active'));
       p.classList.add('active');
       state.filter = p.dataset.filter;
-      render();
+      render(true);
     });
     let t;
-    $('#searchInput').addEventListener('input', (e) => { clearTimeout(t); t = setTimeout(() => { state.search = e.target.value.trim(); render(); }, 120); });
+    $('#searchInput').addEventListener('input', (e) => { clearTimeout(t); t = setTimeout(() => { state.search = e.target.value.trim(); render(true); }, 120); });
 
     const refreshBtn = $('#btnRefresh');
     refreshBtn.addEventListener('click', async () => { refreshBtn.querySelector('svg')?.classList.add('spin'); await api.refresh(); });
@@ -642,12 +743,17 @@
     setIcon('#closeSettings', 'x', 14);
     setIcon('#closeContact', 'x', 14);
     setIcon('#closeChangelog', 'x', 14);
+    setIcon('#closeTerms', 'x', 14);
     // data-icon 속성이 있는 요소(설정 사이드바, 링크 등) 일괄 채우기
     document.querySelectorAll('[data-icon]').forEach((el) => (el.innerHTML = icon(el.dataset.icon, 16)));
   }
 
   // ── 초기화 ──────────────────────────────────
   let started = false;
+  // 전역 오류가 UI 를 멈추지 않도록(안정성)
+  window.addEventListener('error', (e) => console.error('렌더러 오류:', e.error || e.message));
+  window.addEventListener('unhandledrejection', (e) => console.error('처리되지 않은 거부:', e.reason));
+
   async function init() {
     if (started) return;
     started = true;
@@ -658,6 +764,7 @@
     wireUpdateModal();
     wireContact();
     wireChangelog();
+    wireTerms();
 
     state.settings = await api.getSettings();
     state.members = (await api.getMembers()) || [];
@@ -681,14 +788,18 @@
     api.getVersion().then((v) => ($('#appVersion').textContent = 'v' + v));
 
     api.onMembers((members) => {
-      state.members = members || [];
-      $('#btnRefresh').querySelector('svg')?.classList.remove('spin');
-      render();
-      renderSchedule(); // 라이브 상태 변화 반영(내부에서 변화 있을 때만 다시 그림)
-      if (!$('#settingsModal').hidden) {
-        buildMemberList('#subList', state.settings.subscribed, saveSubscriptions);
-        buildMemberList('#autoOpenList', state.settings.autoOpenList, saveAutoOpen);
-        updateAutoOpenEnabled();
+      try {
+        state.members = members || [];
+        $('#btnRefresh').querySelector('svg')?.classList.remove('spin');
+        render();
+        renderSchedule(); // 라이브 상태 변화 반영(내부에서 변화 있을 때만 다시 그림)
+        if (!$('#settingsModal').hidden) {
+          buildMemberList('#subList', state.settings.subscribed, saveSubscriptions);
+          buildMemberList('#autoOpenList', state.settings.autoOpenList, saveAutoOpen);
+          updateAutoOpenEnabled();
+        }
+      } catch (err) {
+        console.error('members 갱신 처리 오류:', err);
       }
     });
     api.onPolling((busy) => {

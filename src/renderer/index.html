@@ -149,6 +149,7 @@
             <div class="about-btns">
               <button class="mini-btn" id="btnCheckUpdate">업데이트 확인</button>
               <button class="mini-btn ghost" id="btnChangelog">업데이트 기록</button>
+              <button class="mini-btn ghost" id="btnTerms">이용약관</button>
             </div>
           </div>
 
@@ -244,6 +245,26 @@
         <span class="co-ico" data-icon="external"></span>
         <div class="co-text"><div class="co-name">X (트위터)</div><div class="co-sub" id="coXsub">DM 문의</div></div>
       </button>
+    </div>
+  </div>
+
+  <!-- 이용약관 모달 -->
+  <div class="modal-backdrop" id="termsModal" hidden>
+    <div class="modal changelog-modal">
+      <button class="icon-btn changelog-close" id="closeTerms"></button>
+      <div class="cl-head"><h2>이용약관</h2></div>
+      <div class="cl-list terms-view">
+        <p class="t-h">스텔라상태 이용약관</p>
+        <p><b>제1조 (목적 및 동의)</b><br>본 약관은 스텔라상태(이하 "앱")의 설치와 사용에 관한 조건을 정합니다. 이용자가 앱을 설치·실행함으로써 본 약관에 동의한 것으로 봅니다.</p>
+        <p><b>제2조 (라이선스)</b><br>앱은 MIT 라이선스로 제공되며, 개인적·비상업적 용도로 자유롭게 사용·복제·배포할 수 있습니다.</p>
+        <p><b>제3조 (사용 라이브러리 및 데이터)</b><br>앱은 오픈소스 라이브러리 stellastatus를 사용하여 방송 상태와 방송 스케줄(뱅온) 정보를 조회합니다. 해당 라이브러리는 치지직(CHZZK)의 방송 상태와 StelLight의 스케줄 등 공개 데이터를 기반으로 동작하며, 라이브러리 또는 원 서비스의 정책·구조 변경에 따라 일부 기능이 제한되거나 중단될 수 있습니다.</p>
+        <p><b>제4조 (비공식 고지)</b><br>본 앱은 스텔라이브 및 관련 서비스의 공식 제작물이 아닌, 팬이 제작한 비공식 도구입니다.</p>
+        <p><b>제5조 (책임의 제한)</b><br>앱은 "있는 그대로(as-is)" 제공됩니다. 제작자는 앱의 사용 또는 사용 불능으로 발생하는 어떠한 직접·간접 손해에 대해서도 책임지지 않습니다.</p>
+        <p><b>제6조 (개인정보)</b><br>앱은 이용자의 개인정보를 별도로 수집·전송하지 않으며, 모든 설정은 이용자의 PC에만 저장됩니다.</p>
+        <p><b>제7조 (자동 업데이트)</b><br>앱은 최신 버전 확인 및 업데이트 파일 다운로드를 위해 배포처(GitHub)에 접속할 수 있습니다.</p>
+        <p><b>제8조 (금지 행위)</b><br>데이터 출처 서버에 과도한 부하를 유발하는 개조·자동화·대량 요청 등의 행위를 금합니다.</p>
+        <p><b>제9조 (약관의 변경)</b><br>본 약관은 앱의 업데이트와 함께 변경될 수 있으며, 변경된 약관은 앱 내 정보 화면 또는 배포처를 통해 고지됩니다.</p>
+      </div>
     </div>
   </div>
 

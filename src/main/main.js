@@ -28,6 +28,10 @@ const poller = new Poller();
 // 윈도우 알림에 앱 이름이 제대로 표시되도록 AppUserModelID 설정
 app.setAppUserModelId(APP_ID);
 
+// 안정성: 예기치 못한 오류로 앱이 강제 종료/오류창이 뜨지 않도록 로깅 후 계속 실행
+process.on('uncaughtException', (err) => console.error('메인 예외:', err));
+process.on('unhandledRejection', (reason) => console.error('메인 거부:', reason));
+
 // 단일 인스턴스 보장 — 두 번째 실행 시 기존 창을 띄운다.
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -60,7 +64,9 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
-    if (!store.get('startHidden')) showWindow();
+    // 부팅 자동 실행(--hidden) 또는 startHidden 설정이면 창을 띄우지 않고 트레이에만 상주
+    const startHidden = process.argv.includes('--hidden') || store.get('startHidden');
+    if (!startHidden) showWindow();
   });
 
   // 창 크기/위치 저장

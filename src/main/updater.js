@@ -27,9 +27,10 @@ function ghGet(url) {
         return resolve(ghGet(res.headers.location));
       }
       if (res.statusCode !== 200) { res.resume(); return reject(new Error('GitHub HTTP ' + res.statusCode)); }
-      let body = '';
-      res.on('data', (c) => (body += c));
-      res.on('end', () => { try { resolve(JSON.parse(body)); } catch (e) { reject(e); } });
+      // 청크를 Buffer 로 모아 마지막에 UTF-8 로 디코딩(한글이 청크 경계에서 깨지는 것 방지)
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch (e) { reject(e); } });
     }).on('error', reject);
   });
 }

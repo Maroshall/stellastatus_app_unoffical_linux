@@ -1,5 +1,7 @@
 # 스텔라상태 (StellaStatus)
 
+**한국어** | [English](README.en.md)
+
 스텔라이브 멤버의 치지직 방송 상태를 확인하고, 방송이 시작되면 윈도우 알림을 보내주는 데스크톱 앱입니다.
 
 이 앱은 스텔라이브가 제공하는 공식 서비스가 아닌, 팬이 운영하는 비공식 서비스입니다.
@@ -85,3 +87,26 @@ git push origin v1.0.0
   차단될 수 있으며, 개인·비상업 용도를 전제로 합니다.
 - 방송 스케줄: 팬 제작 서비스 StelLight의 공개 API를 사용합니다. 서버 부담을 줄이기 위해 확인 주기는
   최소 30초로 제한됩니다.
+
+## 코드 서명 정책 (Code signing policy)
+
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+- 배포용 인스톨러(`스텔라상태 Setup.exe`)는 SignPath.io의 무료 코드 서명과 SignPath Foundation의 인증서로 서명됩니다.
+- **팀 역할**: 본 프로젝트는 1인 메인테이너([tabiluv](https://github.com/tabiluv))가 운영하며,
+  커밋 작성자(Author), 검토자(Reviewer), 승인자(Approver) 역할을 모두 본인이 담당합니다.
+- 서명 대상 아티팩트는 GitHub Actions에서 태그(`v*`) 빌드로 생성되어 릴리스로 배포됩니다.
+
+## 개인정보 처리방침 (Privacy policy)
+
+- 이 앱은 사용자의 개인정보를 수집하거나 외부로 전송하지 않습니다.
+- 앱은 아래 서비스에만 네트워크 요청을 보냅니다.
+  - **치지직(CHZZK)** — 방송 상태 조회
+  - **StelLight** — 방송 스케줄(뱅온) 조회
+  - **GitHub** — 업데이트 확인 및 다운로드
+- 알림 구독 목록, 확인 주기 등 **모든 설정은 사용자 PC(로컬)에만 저장**되며 외부로 전송되지 않습니다.
+- 사용자가 요청하지 않은 정보는 어떤 외부 서버로도 전송하지 않습니다.
+
+## 라이선스
+
+MIT
