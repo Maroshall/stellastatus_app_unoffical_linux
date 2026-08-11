@@ -49,6 +49,34 @@ function run(cmd, args) {
   });
 }
 
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// 지정한 이미지 이름의 프로세스가 아직 실행 중인지 확인
+async function isExeRunning(imageName) {
+  const { stdout } = await run('tasklist', ['/FI', `IMAGENAME eq ${imageName}`, '/NH']);
+  return (stdout || '').toLowerCase().includes(imageName.toLowerCase());
+}
+
+// 프로세스가 완전히 종료될 때까지(파일 잠금 해제까지) 대기
+async function waitForExeGone(imageName, timeoutMs = 5000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try { if (!(await isExeRunning(imageName))) return; } catch { return; }
+    await delay(150);
+  }
+}
+
+// 방금 종료한 앱의 exe/DLL 핸들이 늦게 풀리는 경우를 대비한 복사 재시도
+async function copyFileWithRetry(from, to, tries = 25) {
+  for (let i = 0; ; i++) {
+    try { await fsp.copyFile(from, to); return; }
+    catch (e) {
+      if (i >= tries || !['EBUSY', 'EPERM', 'EACCES'].includes(e.code)) throw e;
+      await delay(200);
+    }
+  }
+}
+
 // ── 설치 ─────────────────────────────────────
 async function install({ targetDir, desktopShortcut = true, startMenuShortcut = true, update = false, onProgress = () => {} }) {
   const src = payloadDir();
@@ -60,7 +88,14 @@ async function install({ targetDir, desktopShortcut = true, startMenuShortcut = 
   onProgress({ phase: 'prepare', percent: 0, text: update ? '업데이트를 준비하는 중…' : '설치를 준비하는 중…' });
 
   // 실행 중인 앱 종료(재설치 시 파일 잠금 방지)
-  await run('taskkill', ['/F', '/IM', APP_EXE, '/T']);
+  // ⚠️ '/T'(자식 트리 종료)를 쓰면 안 된다. 업데이트/제거 시 이 인스톨러는 방금
+  //    종료 대상인 앱(스텔라상태.exe)이 spawn 한 '자식 프로세스'로 실행되므로,
+  //    /T 가 트리를 타고 내려와 인스톨러 자신까지 강제 종료해 버린다
+  //    (= 설치 진행 중 창이 그냥 사라짐). 이미지 이름으로만 종료한다.
+  await run('taskkill', ['/F', '/IM', APP_EXE]);
+  // 강제 종료 직후엔 exe/DLL 핸들이 잠깐 남아 복사가 EBUSY 로 실패할 수 있으므로
+  // 프로세스가 실제로 사라질 때까지 잠시 대기한다.
+  await waitForExeGone(APP_EXE, 5000);
 
   const files = await listFiles(src);
   const total = files.length || 1;
@@ -71,7 +106,7 @@ async function install({ targetDir, desktopShortcut = true, startMenuShortcut = 
     const rel = path.relative(src, file);
     const to = path.join(dest, rel);
     await fsp.mkdir(path.dirname(to), { recursive: true });
-    await fsp.copyFile(file, to);
+    await copyFileWithRetry(file, to);
     done += 1;
     if (done % 5 === 0 || done === total) {
       onProgress({ phase: 'copy', percent: Math.round((done / total) * 92), text: `파일 복사 중… (${done}/${total})` });
@@ -150,7 +185,9 @@ function launch(exePath) {
 // ── 제거 ─────────────────────────────────────
 async function uninstall({ onProgress = () => {} } = {}) {
   onProgress({ phase: 'prepare', percent: 5, text: '제거를 준비하는 중…' });
-  await run('taskkill', ['/F', '/IM', APP_EXE, '/T']);
+  // 업데이트와 동일한 이유로 '/T' 를 쓰지 않는다(제거 프로그램도 앱의 자식 프로세스).
+  await run('taskkill', ['/F', '/IM', APP_EXE]);
+  await waitForExeGone(APP_EXE, 5000);
 
   // 설치 위치 파악
   const q = await run('reg', ['query', UNINSTALL_KEY, '/v', 'InstallLocation']);
