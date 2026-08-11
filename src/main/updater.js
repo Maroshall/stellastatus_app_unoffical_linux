@@ -48,6 +48,7 @@ function cmpVersion(a, b) {
 function download(url, dest, onProgress) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { headers: { 'User-Agent': 'stellastatus' } }, (res) => {
+      req.setTimeout(0); // 응답이 시작됐으니 '연결' 타임아웃은 해제하고, 이후엔 아래 스톨 타이머가 관리
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
         return resolve(download(res.headers.location, dest, onProgress));
@@ -56,24 +57,31 @@ function download(url, dest, onProgress) {
       const total = Number(res.headers['content-length'] || 0);
       let got = 0;
       let settled = false;
+      let stall = null;
       const file = fs.createWriteStream(dest);
       // 네트워크가 중간에 끊기면 res 스트림에서 error 가 나는데, 이를 처리하지 않으면
       // 프로세스가 죽거나(무처리 예외) 다운로드가 영영 끝나지 않는다. 여기서 깔끔히 실패 처리한다.
       const fail = (err) => {
         if (settled) return; settled = true;
+        clearTimeout(stall);
         try { res.destroy(); } catch { /* ignore */ }
         try { file.destroy(); } catch { /* ignore */ }
         fs.unlink(dest, () => reject(err)); // 받다 만 파일 정리 후 실패
       };
+      // 데이터가 '전혀' 안 오는 상태가 90초 지속될 때만 멈춘 것으로 보고 실패한다.
+      // 매 청크마다 리셋되므로, 느리거나 잠깐 멈칫하는 회선이라도 데이터가 흐르는 한 끊기지 않는다.
+      // (기존 30초 고정 타임아웃은 조금만 느려도 오탐으로 '내려받기 오류'를 냈다.)
+      const bumpStall = () => { clearTimeout(stall); stall = setTimeout(() => fail(new Error('다운로드가 멈췄습니다(응답 없음).')), 90000); };
       res.on('error', fail);
       file.on('error', fail);
-      res.on('data', (c) => { got += c.length; if (total) onProgress(Math.round((got / total) * 100)); });
+      res.on('data', (c) => { got += c.length; bumpStall(); if (total) onProgress(Math.round((got / total) * 100)); });
       res.pipe(file);
-      file.on('finish', () => { if (settled) return; settled = true; file.close(() => resolve(dest)); });
+      file.on('finish', () => { if (settled) return; settled = true; clearTimeout(stall); file.close(() => resolve(dest)); });
+      bumpStall();
     });
     req.on('error', reject);
-    // 연결이 멈춘 채 매달리지 않도록 타임아웃(30초) — destroy 하면 위 error 로 이어져 실패 처리된다.
-    req.setTimeout(30000, () => req.destroy(new Error('다운로드 시간이 초과되었습니다.')));
+    // 최초 연결이 안 되는 경우만을 위한 연결 타임아웃(30초). 연결되면 위에서 해제한다.
+    req.setTimeout(30000, () => req.destroy(new Error('서버에 연결하지 못했습니다.')));
   });
 }
 
@@ -132,9 +140,23 @@ async function downloadPending() {
   const { url, name, info } = pendingDownload;
   const dest = path.join(os.tmpdir(), name);
   emit({ state: 'downloading', percent: 0, ...info });
-  await download(url, dest, (percent) => emit({ state: 'downloading', percent }));
-  downloadedPath = dest;
-  emit({ state: 'downloaded', ...info });
+  // 일시적 네트워크 오류(연결 끊김/멈춤)에 대비해 자동 재시도(최대 3회, 점증 대기).
+  const MAX = 3;
+  let lastErr;
+  for (let attempt = 1; attempt <= MAX; attempt++) {
+    try {
+      await download(url, dest, (percent) => emit({ state: 'downloading', percent }));
+      downloadedPath = dest;
+      emit({ state: 'downloaded', ...info });
+      return;
+    } catch (e) {
+      lastErr = e;
+      if (attempt >= MAX) break;
+      emit({ state: 'downloading', percent: 0, ...info }); // 진행바 초기화하며 재시도
+      await new Promise((r) => setTimeout(r, 1500 * attempt)); // 1.5s → 3s 대기 후 재시도
+    }
+  }
+  throw lastErr;
 }
 
 // [설치하기] 클릭 시 호출 — 아직 안 받았으면 지금 다운로드한 뒤, 복사/설치는 인스톨러에 넘긴다.
