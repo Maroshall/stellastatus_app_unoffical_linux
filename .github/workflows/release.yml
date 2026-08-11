@@ -84,7 +84,8 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Build macOS dmg (unsigned)
-        run: npx electron-builder --mac dmg --publish never
+        # arch 를 명시하지 않으면 호스트(arm64)만 빌드된다. Intel(x64) 까지 만들려면 둘 다 지정.
+        run: npx electron-builder --mac dmg --arm64 --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false   # 미서명: 키체인 인증서 자동탐색 비활성화
 
