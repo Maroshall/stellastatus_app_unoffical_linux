@@ -48,6 +48,26 @@ nsis:
   warningsAsErrors: false
   include: build/installer.nsh
 
+# ── macOS 설치 파일(.dmg) ──────────────────────────────────
+# 반드시 macOS 러너에서만 빌드된다(로컬 Windows 불가). GitHub Actions 의 build-mac 잡에서 생성.
+# icon 은 512px 이상 png 를 주면 electron-builder 가 .icns 를 자동 생성한다.
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64   # Apple Silicon
+        - x64     # Intel
+  icon: build/icon.png
+  category: public.app-category.utilities
+  # 코드 서명/공증 인증서가 없으므로 서명하지 않는다(미서명 → Gatekeeper 경고).
+  # 인증서를 갖추면 identity/notarize 를 설정한다.
+  identity: null
+
+dmg:
+  # 파일명은 ASCII 로 고정한다. (한글이 들어가면 GitHub 업로드 시 이름이 잘려
+  #  '-1.0.4-arm64.dmg' 처럼 되므로. 업데이터는 이름의 arm64/x64 로 아키텍처를 고른다.)
+  artifactName: StellaStatus-${version}-${arch}.dmg
+
 # ── 자동 업데이트(GitHub Releases) ─────────────────────────
 # 배포 전 owner/repo 를 본인 저장소로 바꾸세요.
 publish:

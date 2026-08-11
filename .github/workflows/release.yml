@@ -64,3 +64,31 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── macOS(.dmg) ──────────────────────────────────────
+  # .dmg 는 macOS 에서만 빌드 가능하므로 별도 러너에서 만든 뒤, 위에서 만든 같은 릴리스에 첨부한다.
+  # (미서명 빌드 — 인증서 없이 산출물만. Gatekeeper 경고는 남는다.)
+  build-mac:
+    needs: build            # Windows 잡이 릴리스를 먼저 생성한 뒤 실행
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build macOS dmg (unsigned)
+        run: npx electron-builder --mac dmg --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false   # 미서명: 키체인 인증서 자동탐색 비활성화
+
+      - name: Upload dmg to release
+        run: gh release upload "${{ github.ref_name }}" dist/*.dmg --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

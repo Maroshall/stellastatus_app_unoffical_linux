@@ -220,21 +220,30 @@
     // 폴링 등 일반 갱신은 전체 다시 그림(애니메이션 없음)
     if (!animate) { renderNow(false); return; }
 
-    // 필터/검색 전환: 남는 카드는 유지, 나가는 카드만 퇴장, 새 카드만 등장 애니메이션
+    // 필터/탭 전환: 남는 카드는 FLIP 으로 새 자리로 '슬라이드', 나가는 카드만 퇴장,
+    // 새로 들어오는 카드만 등장 애니메이션. (카드가 순간이동하거나 위에 겹쳐 보이던 문제 해결)
     const list = applyFilter(state.members);
     const newKeySet = new Set(list.map((m) => m.key));
     const cards = [...grid.querySelectorAll('.card')];
     const existing = new Map(cards.filter((c) => !c.classList.contains('leave')).map((c) => [c.dataset.key, c]));
 
-    // 1) 나가는 카드: 현재 위치를 고정(absolute)해 레이아웃에서 빼고 애니메이션으로 제거
+    // FIRST: 계속 남을 카드들의 현재 화면 위치를 먼저 기록한다(레이아웃을 바꾸기 전에).
+    const firstRects = new Map();
+    existing.forEach((c, key) => { if (newKeySet.has(key)) firstRects.set(key, c.getBoundingClientRect()); });
+
+    // 1) 나가는 카드: 현재 위치에 absolute 로 고정해 레이아웃에서 빼고(남는 카드가 자리를 메움),
+    //    남는/새 카드보다 '아래' 레이어(z-index:0)에서 페이드아웃 → 위에 덮어씌워지는 현상 방지.
     grid.style.position = 'relative';
     const leaving = cards.filter((c) => !newKeySet.has(c.dataset.key) && !c.classList.contains('leave'));
-    const rects = leaving.map((c) => ({ c, top: c.offsetTop, left: c.offsetLeft, w: c.offsetWidth }));
-    rects.forEach(({ c, top, left, w }) => {
+    const leaveRects = leaving.map((c) => ({ c, top: c.offsetTop, left: c.offsetLeft, w: c.offsetWidth }));
+    leaveRects.forEach(({ c, top, left, w }) => {
       c.style.width = w + 'px';
       c.style.position = 'absolute';
       c.style.top = top + 'px';
       c.style.left = left + 'px';
+      c.style.margin = '0';
+      c.style.zIndex = '0';
+      c.style.pointerEvents = 'none';
       c.classList.add('leave');
       const done = () => c.remove();
       c.addEventListener('animationend', done, { once: true });
@@ -253,12 +262,14 @@
       }
       const c = memberCard(m);
       c.classList.add('enter');
+      c.style.zIndex = '1'; // 나가는 카드(z-index:0) 위에서 등장
       c.style.animationDelay = Math.min(anim++ * 0.03, 0.22) + 's';
       // 등장이 끝나면 enter 클래스 제거 → 이후 재배치돼도 다시 애니메이션되지 않음
       const onEnd = (e) => {
         if (e.animationName !== 'card-in') return;
         c.classList.remove('enter');
         c.style.animationDelay = '';
+        c.style.zIndex = '';
         c.removeEventListener('animationend', onEnd);
       };
       c.addEventListener('animationend', onEnd);
@@ -277,6 +288,47 @@
       }
     } else if (emptyEl) {
       emptyEl.remove();
+    }
+
+    // 4) FLIP — 남는 카드를 옛 위치에서 새 위치로 부드럽게 이동. (측정/역변환/재생을 분리해
+    //    레이아웃 스래싱을 피하고, 단일 리플로우로 전환을 확실히 트리거한다.)
+    // LAST: 새 위치를 먼저 모두 읽는다(읽기만).
+    const lastRects = new Map();
+    firstRects.forEach((_first, key) => {
+      const c = existing.get(key);
+      if (c && c.isConnected) lastRects.set(key, c.getBoundingClientRect());
+    });
+    // INVERT: 옛 자리로 되돌려 놓는다(쓰기만).
+    const movers = [];
+    firstRects.forEach((first, key) => {
+      const last = lastRects.get(key);
+      const c = existing.get(key);
+      if (!last || !c) return;
+      const dx = Math.round(first.left - last.left);
+      const dy = Math.round(first.top - last.top);
+      if (!dx && !dy) return; // 자리 안 바뀐 카드는 건너뜀
+      c.style.zIndex = '1'; // 나가는 카드(z-index:0) 위로
+      c.style.transition = 'none';
+      c.style.transform = `translate(${dx}px, ${dy}px)`;
+      c.style.willChange = 'transform';
+      movers.push(c);
+    });
+    // PLAY: 한 번의 리플로우로 역변환을 확정한 뒤, 새 자리로 애니메이션.
+    if (movers.length) {
+      void grid.offsetWidth; // 강제 리플로우 1회
+      movers.forEach((c) => {
+        c.style.transition = 'transform .34s cubic-bezier(.2,.8,.2,1)';
+        c.style.transform = 'none';
+        const clear = (e) => {
+          if (e.propertyName !== 'transform') return;
+          c.style.transition = '';
+          c.style.transform = '';
+          c.style.willChange = '';
+          c.style.zIndex = '';
+          c.removeEventListener('transitionend', clear);
+        };
+        c.addEventListener('transitionend', clear);
+      });
     }
 
     state.visibleKeys = newKeySet;
@@ -314,10 +366,10 @@
   }
 
   // ── 인앱 토스트(위→아래 플로팅) ───────────────
-  function showToast({ icon: ic, avatar, accent, title, desc, actionLabel, onAction, url, duration = 5000, spin = false }) {
+  function showToast({ icon: ic, avatar, accent, title, desc, actionLabel, onAction, onClose, className, url, duration = 5000, spin = false }) {
     const host = $('#toasts');
     const t = document.createElement('div');
-    t.className = 'toast';
+    t.className = 'toast' + (className ? ' ' + className : '');
     if (accent) t.style.setProperty('--toast-accent', accent);
     const media = avatar
       ? `<img class="t-ava" src="${esc(avatar)}" alt="">`
@@ -335,14 +387,16 @@
     if (ava) wireImgFallback(ava, 'assets/logo_star.png');
 
     let closed = false;
+    let acted = false;
     const close = () => {
       if (closed) return; closed = true;
+      if (!acted) onClose && onClose(); // 설치(action)로 닫힌 게 아니라 직접 닫힘 → dismiss 콜백
       t.classList.add('closing'); // 높이/여백 접기 + 페이드 → 아래 토스트가 부드럽게 올라옴
       setTimeout(() => t.remove(), 340);
     };
     t.querySelector('.t-close').addEventListener('click', (e) => { e.stopPropagation(); close(); });
     const act = t.querySelector('.t-act');
-    if (act) act.addEventListener('click', (e) => { e.stopPropagation(); onAction && onAction(); close(); });
+    if (act) act.addEventListener('click', (e) => { e.stopPropagation(); acted = true; onAction && onAction(); close(); });
     if (url) t.addEventListener('click', () => { openLink(url); close(); });
 
     if (spin) t.querySelector('.t-ico svg')?.classList.add('spin');
@@ -380,14 +434,16 @@
     const items = state.scheduleItems;
     if (!Array.isArray(items)) return null;
     const now = Date.now();
-    // 방송 중 → '시작됨', 시간이 지났고 오프라인(방송 꺼짐) → '종료'. 둘 다 맨 뒤 + 흐리게.
+    // 방송 중 → '시작됨'(맨 뒤+흐리게). 시간이 '확정된' 뱅온이 지났고 오프라인 → '종료'(맨 뒤+흐리게).
+    // 00:00~ 처럼 시간 미확정(isFixedTime=false)인 항목은 자정이 지나도 '종료'가 아니라 '예정'으로 둔다.
     return items
       .map((it) => {
         const rest = isRest(it.title);
         const t = parseOpen(it.startDateTime) ?? Infinity; // KST 기준 절대시간
         const live = !rest && scheduleMemberLive(it);
-        const ended = !rest && !live && t < now;
-        return { it, t, rest, live, ended, done: live || ended };
+        const ended = !rest && !live && it.isFixedTime && t < now;
+        const upcoming = !rest && !live && !ended; // 아직 시작 전 = 예정
+        return { it, t, rest, live, ended, upcoming, done: live || ended };
       })
       .sort((a, b) => (a.done !== b.done ? (a.done ? 1 : -1) : a.t - b.t));
   }
@@ -407,12 +463,14 @@
     state._schedSig = sig;
 
     strip.innerHTML = '';
-    rows.forEach(({ it, rest, live, ended, done }) => {
+    rows.forEach(({ it, rest, live, ended, upcoming, done }) => {
       const badge = live
         ? '<span class="sched-started">시작됨</span>'
         : ended
           ? '<span class="sched-started ended">종료</span>'
-          : '';
+          : upcoming
+            ? '<span class="sched-started upcoming">예정</span>'
+            : '';
       const card = document.createElement('div');
       card.className = 'sched-card' + (done ? ' past' : '');
       card.innerHTML = `
@@ -589,10 +647,26 @@
         break;
       case 'available':
         closeChecking();
-        // [나중에]로 미룬 뒤 자동 재확인으로 다시 뜨는 것을 막는다.
-        // (필수 업데이트, 또는 사용자가 직접 [업데이트 확인]을 누른 경우는 항상 표시)
-        if (state.updateSnoozed && !manual && !payload.mandatory) { state.manualUpdateCheck = false; break; }
-        openUpdateModal(payload);
+        if (payload.mandatory) {
+          // 필수 업데이트: 바로 강제 모달(취소 불가).
+          openUpdateModal(payload);
+        } else if (!(state.updateSnoozed && !manual)) {
+          // 일반 업데이트: 필수가 아니어도 '업데이트가 있어요' 토스트로 알림(설치/닫기).
+          //  - 설치: 업데이트 창을 연다.  - 닫기: 이번 실행 동안 다시 알리지 않음(스누즈).
+          // ([나중에]로 미뤘고 자동 확인이면 표시하지 않음. 직접 [업데이트 확인] 시엔 표시)
+          if (!document.querySelector('#toasts .update-toast')) {
+            showToast({
+              icon: 'download',
+              className: 'update-toast',
+              title: '업데이트가 있어요',
+              desc: 'v' + (payload.version || '') + ' 새 버전이 나왔어요.',
+              actionLabel: '설치',
+              onAction: () => openUpdateModal(payload),
+              onClose: () => { state.updateSnoozed = true; },
+              duration: 0,
+            });
+          }
+        }
         state.manualUpdateCheck = false;
         break;
       case 'downloading':
@@ -611,6 +685,19 @@
           // 필수 업데이트의 자동 다운로드 완료 — 설치 버튼 활성화.
           if ($('#updateModal').hidden) openUpdateModal(payload);
           updateReady();
+        }
+        state.manualUpdateCheck = false;
+        break;
+      case 'mac-manual':
+        // 맥: .dmg 를 열었으니 사용자가 직접 Applications 로 드래그해 교체하도록 안내.
+        // (버튼은 재시도용으로 유지 — 다시 누르면 .dmg 를 다시 연다)
+        state.installing = false;
+        if (state.updateInfo && !$('#updateModal').hidden) {
+          $('#umProgress').hidden = false;
+          $('#umBar').style.width = '100%';
+          $('#umProgText').textContent = '받은 설치 파일(.dmg)을 열었어요. 앱을 Applications 폴더로 드래그해 교체한 뒤 다시 실행해 주세요.';
+          $('#umInstall').disabled = false;
+          $('#umInstall').textContent = '지금 설치';
         }
         state.manualUpdateCheck = false;
         break;

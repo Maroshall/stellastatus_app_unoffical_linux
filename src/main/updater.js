@@ -94,7 +94,15 @@ async function check({ manual = false } = {}) {
     const latest = rel.tag_name || rel.name || '0.0.0';
     if (cmpVersion(latest, app.getVersion()) <= 0) { emit({ state: 'none' }); return; }
 
-    const asset = (rel.assets || []).find((a) => /Setup.*\.exe$/i.test(a.name) || /\.exe$/i.test(a.name));
+    // 플랫폼별 설치 파일 선택: 맥은 .dmg(아키텍처 매칭), 윈도우는 Setup.exe
+    let asset;
+    if (process.platform === 'darwin') {
+      const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
+      const dmgs = (rel.assets || []).filter((a) => /\.dmg$/i.test(a.name));
+      asset = dmgs.find((a) => new RegExp(arch, 'i').test(a.name)) || dmgs[0];
+    } else {
+      asset = (rel.assets || []).find((a) => /Setup.*\.exe$/i.test(a.name) || /\.exe$/i.test(a.name));
+    }
     if (!asset) { emit({ state: 'error', message: '설치 파일을 찾을 수 없습니다.' }); return; }
 
     const info = {
@@ -139,10 +147,17 @@ async function downloadAndInstall() {
   }
 }
 
-// 받은 Setup.exe 를 '업데이트(무인) 모드'로 실행 → 기존 설치 위치에 제자리 덮어쓰기 후 재실행
+// 받은 설치 파일을 실행 → (윈도우) 커스텀 인스톨러 무인 업데이트 / (맥) .dmg 열어 수동 설치 안내
 function runInstaller() {
   if (!downloadedPath || !fs.existsSync(downloadedPath)) {
     shell.openExternal(`https://github.com/${OWNER}/${REPO}/releases/latest`);
+    return;
+  }
+  // 맥: 코드 서명/공증이 없으면 무인 설치가 불가하므로, 받은 .dmg 를 열어
+  // 사용자가 앱을 Applications 로 드래그해 교체하도록 안내한다(빈 화면/45초 폴백 없음).
+  if (process.platform === 'darwin') {
+    emit({ state: 'mac-manual' });
+    shell.openPath(downloadedPath);
     return;
   }
   const installDir = path.dirname(process.execPath);

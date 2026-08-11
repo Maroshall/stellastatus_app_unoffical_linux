@@ -28,6 +28,12 @@ const poller = new Poller();
 // 윈도우 알림에 앱 이름이 제대로 표시되도록 AppUserModelID 설정
 app.setAppUserModelId(APP_ID);
 
+// GPU 셰이더 디스크 캐시가 잠겨(백신 실시간 검사/중복 실행 등) 이동에 실패하면
+// "Unable to move the cache (0x5)" / "Gpu Cache Creation failed" 로그가 뜬다(동작엔 무해).
+// 디스크 캐시를 쓰지 않게 해 해당 로그를 없앤다.
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+app.commandLine.appendSwitch('disable-gpu-program-cache');
+
 // 안정성: 예기치 못한 오류로 앱이 강제 종료/오류창이 뜨지 않도록 로깅 후 계속 실행
 process.on('uncaughtException', (err) => console.error('메인 예외:', err));
 process.on('unhandledRejection', (reason) => console.error('메인 거부:', reason));
