@@ -192,6 +192,8 @@ function setupAutoUpdater() {
       lastNotifiedUpdate = payload.version;
       notifyUpdate(payload);
     }
+    // 필수(강제) 업데이트는 트레이에 숨어 있어도 창을 띄워 안내가 반드시 보이도록 한다.
+    if (payload.state === 'available' && payload.mandatory) showWindow();
   });
 
   if (!isDev) {
@@ -251,9 +253,11 @@ function registerIpc() {
     }
     updater.check({ manual: true });
   });
+  // [설치하기] — 일반 업데이트는 이때 비로소 다운로드하고, 복사/설치는 인스톨러에 넘긴다.
+  // (isQuitting 은 실제 설치 실행 시 app.quit → before-quit 에서 설정된다.
+  //  다운로드가 실패해 설치로 넘어가지 않으면 앱은 계속 트레이에 상주한다.)
   ipcMain.handle('update:install', () => {
-    isQuitting = true;
-    updater.runInstaller();
+    updater.downloadAndInstall();
   });
 
   ipcMain.handle('app:version', () => app.getVersion());

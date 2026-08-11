@@ -17,6 +17,9 @@ try {
 
 let emit = () => {};
 let downloadedPath = null;
+// 일반(비필수) 업데이트는 [설치하기]를 누를 때까지 다운로드를 보류한다.
+// check() 에서 찾은 에셋 정보를 여기 담아두고, downloadAndInstall() 에서 사용한다.
+let pendingDownload = null; // { url, name, info }
 
 function init(emitter) { emit = emitter || (() => {}); }
 
@@ -44,7 +47,7 @@ function cmpVersion(a, b) {
 
 function download(url, dest, onProgress) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'stellastatus' } }, (res) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'stellastatus' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
         return resolve(download(res.headers.location, dest, onProgress));
@@ -52,12 +55,25 @@ function download(url, dest, onProgress) {
       if (res.statusCode !== 200) { res.resume(); return reject(new Error('다운로드 실패 HTTP ' + res.statusCode)); }
       const total = Number(res.headers['content-length'] || 0);
       let got = 0;
+      let settled = false;
       const file = fs.createWriteStream(dest);
+      // 네트워크가 중간에 끊기면 res 스트림에서 error 가 나는데, 이를 처리하지 않으면
+      // 프로세스가 죽거나(무처리 예외) 다운로드가 영영 끝나지 않는다. 여기서 깔끔히 실패 처리한다.
+      const fail = (err) => {
+        if (settled) return; settled = true;
+        try { res.destroy(); } catch { /* ignore */ }
+        try { file.destroy(); } catch { /* ignore */ }
+        fs.unlink(dest, () => reject(err)); // 받다 만 파일 정리 후 실패
+      };
+      res.on('error', fail);
+      file.on('error', fail);
       res.on('data', (c) => { got += c.length; if (total) onProgress(Math.round((got / total) * 100)); });
       res.pipe(file);
-      file.on('finish', () => file.close(() => resolve(dest)));
-      file.on('error', reject);
-    }).on('error', reject);
+      file.on('finish', () => { if (settled) return; settled = true; file.close(() => resolve(dest)); });
+    });
+    req.on('error', reject);
+    // 연결이 멈춘 채 매달리지 않도록 타임아웃(30초) — destroy 하면 위 error 로 이어져 실패 처리된다.
+    req.setTimeout(30000, () => req.destroy(new Error('다운로드 시간이 초과되었습니다.')));
   });
 }
 
@@ -66,7 +82,7 @@ function isMandatory(body) {
   return /<!--\s*force-?update\s*-->/i.test(body || '');
 }
 
-// 최신 릴리스 확인 → 새 버전이면 자동 다운로드까지 진행
+// 최신 릴리스 확인 → 새 버전이면 알림. 필수는 즉시 자동 다운로드, 일반은 [설치하기] 시 다운로드.
 async function check({ manual = false } = {}) {
   if (!OWNER || OWNER === 'YOUR_GITHUB_USERNAME' || !REPO) {
     emit({ state: manual ? 'error' : 'none', message: '배포 저장소가 설정되지 않았습니다.' });
@@ -89,11 +105,35 @@ async function check({ manual = false } = {}) {
       htmlUrl: rel.html_url || `https://github.com/${OWNER}/${REPO}/releases/latest`,
     };
 
+    // 다운로드에 필요한 정보는 항상 보관한다(필수 자동 다운로드가 실패해도 [지금 설치]로 재시도 가능).
+    pendingDownload = { url: asset.browser_download_url, name: asset.name, info };
+    downloadedPath = null;
+
     emit({ state: 'available', ...info });
-    const dest = path.join(os.tmpdir(), asset.name);
-    await download(asset.browser_download_url, dest, (percent) => emit({ state: 'downloading', percent }));
-    downloadedPath = dest;
-    emit({ state: 'downloaded', ...info });
+
+    // 필수 업데이트만 즉시 자동 다운로드. 일반은 [설치하기]를 누를 때까지 보류한다.
+    if (info.mandatory) await downloadPending();
+  } catch (e) {
+    emit({ state: 'error', message: String(e?.message || e) });
+  }
+}
+
+// 보관해 둔 pendingDownload 를 실제로 내려받는다(진행률/완료 이벤트 포함).
+async function downloadPending() {
+  if (!pendingDownload) throw new Error('내려받을 업데이트 정보가 없습니다.');
+  const { url, name, info } = pendingDownload;
+  const dest = path.join(os.tmpdir(), name);
+  emit({ state: 'downloading', percent: 0, ...info });
+  await download(url, dest, (percent) => emit({ state: 'downloading', percent }));
+  downloadedPath = dest;
+  emit({ state: 'downloaded', ...info });
+}
+
+// [설치하기] 클릭 시 호출 — 아직 안 받았으면 지금 다운로드한 뒤, 복사/설치는 인스톨러에 넘긴다.
+async function downloadAndInstall() {
+  try {
+    if (!downloadedPath || !fs.existsSync(downloadedPath)) await downloadPending();
+    runInstaller();
   } catch (e) {
     emit({ state: 'error', message: String(e?.message || e) });
   }
@@ -129,4 +169,4 @@ async function getReleases() {
   }
 }
 
-module.exports = { init, check, runInstaller, getReleases };
+module.exports = { init, check, runInstaller, downloadAndInstall, getReleases };

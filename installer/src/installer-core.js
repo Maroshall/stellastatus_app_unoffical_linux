@@ -11,6 +11,10 @@ const APP_NAME = '스텔라상태';
 const APP_EXE = '스텔라상태.exe';
 const UNINSTALL_EXE = '스텔라상태 제거.exe';
 const PUBLISHER = '스텔라리움';
+// 메인 앱이 setAppUserModelId 로 쓰는 값과 반드시 동일해야 한다.
+// 이 값이 시작 메뉴 바로가기에 박혀 있어야 윈도우 토스트 알림이 AUMID('com.stellastatus.app')
+// 대신 바로가기 이름('스텔라상태')으로 표시된다.
+const APP_AUMID = 'com.stellastatus.app';
 const UNINSTALL_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\StellaStatus';
 
 // 배포 시 payload(앱 본체)는 리소스로 동봉된다. 개발 중엔 STELLA_PAYLOAD 로 지정 가능.
@@ -121,14 +125,17 @@ async function install({ targetDir, desktopShortcut = true, startMenuShortcut = 
   const exePath = path.join(dest, APP_EXE);
   const iconPath = exePath;
 
-  // 바로가기 (업데이트 시엔 기존 것을 유지하고 새로 만들지 않음)
-  if (!update) {
-    if (desktopShortcut) writeShortcut(path.join(app.getPath('desktop'), `${APP_NAME}.lnk`), exePath, iconPath);
-    if (startMenuShortcut) {
-      const startDir = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs');
-      await fsp.mkdir(startDir, { recursive: true });
-      writeShortcut(path.join(startDir, `${APP_NAME}.lnk`), exePath, iconPath);
-    }
+  // 바로가기.
+  // 시작 메뉴 바로가기는 토스트 알림의 앱 이름(AppUserModelID) 연결에 쓰이므로
+  // 설치·업데이트 모두에서 보장한다(기존 사용자도 업데이트 시 알림 이름이 바로잡힌다).
+  // 바탕화면 바로가기는 신규 설치에서 선택한 경우에만 만들고, 업데이트 시엔 건드리지 않는다.
+  const startDir = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs');
+  await fsp.mkdir(startDir, { recursive: true });
+  if (update || startMenuShortcut) {
+    writeShortcut(path.join(startDir, `${APP_NAME}.lnk`), exePath, iconPath);
+  }
+  if (!update && desktopShortcut) {
+    writeShortcut(path.join(app.getPath('desktop'), `${APP_NAME}.lnk`), exePath, iconPath);
   }
 
   // 언인스톨 레지스트리(제어판 프로그램 목록) — 버전 갱신 포함
@@ -146,6 +153,7 @@ function writeShortcut(linkPath, target, icon, args) {
       cwd: path.dirname(target),
       icon,
       iconIndex: 0,
+      appUserModelId: APP_AUMID, // 토스트 알림이 이 바로가기(=스텔라상태)와 연결되도록
       description: APP_NAME,
     });
   } catch (e) {

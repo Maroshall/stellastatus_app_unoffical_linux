@@ -10,6 +10,8 @@
     manualUpdateCheck: false,
     scheduleItems: null,
     updateInfo: null,
+    updateSnoozed: false, // [나중에] 누르면 이번 실행 동안 자동 알림을 숨긴다(완전 재시작 시 초기화)
+    installing: false,    // [설치하기] 눌러 다운로드/설치가 진행 중인지
     visibleKeys: new Set(),
   };
 
@@ -531,6 +533,7 @@
   // ── 업데이트 모달 ────────────────────────────
   function openUpdateModal(info) {
     state.updateInfo = info;
+    state.installing = false;
     $('#umVersion').textContent = 'v' + (info.version || '');
     $('#umRepo').textContent = info.repo || '';
     $('#umNotes').innerHTML = mdToHtml(info.notes || '(변경 내용 없음)');
@@ -540,9 +543,17 @@
     $('#umLater').hidden = !!info.mandatory;
     // 진행 상태 초기화
     $('#umBar').style.width = '0%';
-    $('#umProgText').textContent = '업데이트를 내려받는 중…';
-    $('#umProgress').hidden = false;
-    $('#umInstall').disabled = true;
+    $('#umInstall').textContent = '지금 설치';
+    if (info.mandatory) {
+      // 필수: 지금과 동일 — 자동으로 내려받는 중이며, 완료되면 설치가 활성화된다.
+      $('#umProgText').textContent = '업데이트를 내려받는 중…';
+      $('#umProgress').hidden = false;
+      $('#umInstall').disabled = true;
+    } else {
+      // 일반: [지금 설치]를 눌러야 다운로드가 시작된다. 진행바는 숨기고 버튼은 활성화.
+      $('#umProgress').hidden = true;
+      $('#umInstall').disabled = false;
+    }
     const m = $('#updateModal');
     m.hidden = false;
     void m.offsetHeight;
@@ -550,6 +561,8 @@
   }
   function closeUpdateModal() {
     if (state.updateInfo && state.updateInfo.mandatory) return; // 강제 업데이트는 닫기 불가
+    // [나중에]/바깥 클릭으로 닫으면 이번 실행 동안은 다시 뜨지 않는다(완전 재시작 시에만 재알림).
+    state.updateSnoozed = true;
     const m = $('#updateModal');
     m.classList.remove('open');
     setTimeout(() => (m.hidden = true), 240);
@@ -576,16 +589,27 @@
         break;
       case 'available':
         closeChecking();
+        // [나중에]로 미룬 뒤 자동 재확인으로 다시 뜨는 것을 막는다.
+        // (필수 업데이트, 또는 사용자가 직접 [업데이트 확인]을 누른 경우는 항상 표시)
+        if (state.updateSnoozed && !manual && !payload.mandatory) { state.manualUpdateCheck = false; break; }
         openUpdateModal(payload);
         state.manualUpdateCheck = false;
         break;
       case 'downloading':
-        if (!$('#updateModal').hidden) setUpdateProgress(payload.percent);
+        if (!$('#updateModal').hidden) { $('#umProgress').hidden = false; setUpdateProgress(payload.percent); }
         break;
       case 'downloaded':
         closeChecking();
-        if ($('#updateModal').hidden) openUpdateModal(payload);
-        updateReady();
+        if (state.installing) {
+          // [지금 설치]로 시작한 다운로드가 끝난 경우 — 곧 인스톨러로 넘어간다.
+          $('#umProgress').hidden = false;
+          $('#umBar').style.width = '100%';
+          $('#umProgText').textContent = '설치를 시작합니다…';
+        } else {
+          // 필수 업데이트의 자동 다운로드 완료 — 설치 버튼 활성화.
+          if ($('#updateModal').hidden) openUpdateModal(payload);
+          updateReady();
+        }
         state.manualUpdateCheck = false;
         break;
       case 'none':
@@ -598,18 +622,36 @@
         if (manual) showToast({ icon: 'alert', title: '개발 모드에서는 업데이트를 확인할 수 없어요', duration: 4000 });
         state.manualUpdateCheck = false;
         break;
-      case 'error':
+      case 'error': {
         closeChecking();
-        showToast({ icon: 'alert', title: '업데이트를 확인할 수 없어요', desc: manual ? '네트워크나 배포 설정을 확인해 주세요.' : '', duration: 5000 });
+        state.installing = false;
+        // 업데이트 모달이 열려 있는 상태(다운로드 중 실패 등)라면 창을 닫지 말고,
+        // 실패를 표시한 뒤 [지금 설치]로 다시 시도할 수 있게 버튼을 복구한다.
+        // (필수 업데이트도 여기서 재시도 가능 — "내려받는 중"에서 멈추지 않는다.)
+        const modalOpen = state.updateInfo && !$('#updateModal').hidden;
+        if (modalOpen) {
+          $('#umProgress').hidden = false;
+          $('#umBar').style.width = '0%';
+          $('#umProgText').textContent = '내려받기에 실패했어요. 다시 시도해 주세요.';
+          $('#umInstall').disabled = false;
+          $('#umInstall').textContent = '지금 설치';
+        }
+        showToast({ icon: 'alert', title: modalOpen ? '업데이트를 내려받지 못했어요' : '업데이트를 확인할 수 없어요', desc: manual || modalOpen ? '네트워크 상태를 확인한 뒤 다시 시도해 주세요.' : '', duration: 5000 });
         state.manualUpdateCheck = false;
         break;
+      }
     }
   }
 
   function wireUpdateModal() {
     $('#umInstall').addEventListener('click', () => {
+      state.installing = true;
       $('#umInstall').disabled = true;
       $('#umInstall').textContent = '설치 중…';
+      // 일반 업데이트는 이때부터 다운로드가 시작되므로 진행바를 노출한다.
+      $('#umProgress').hidden = false;
+      $('#umBar').style.width = '0%';
+      $('#umProgText').textContent = '업데이트를 내려받는 중…';
       api.installUpdate();
     });
     $('#umLater').addEventListener('click', closeUpdateModal);
