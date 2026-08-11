@@ -602,9 +602,11 @@
         closeChecking();
         if (state.installing) {
           // [지금 설치]로 시작한 다운로드가 끝난 경우 — 곧 인스톨러로 넘어간다.
+          // 인스톨러가 압축 해제/부팅되는 몇 초 동안 이 창이 그대로 떠 있으므로,
+          // 빈 화면처럼 보이지 않게 '준비 중' 안내를 유지한다.
           $('#umProgress').hidden = false;
           $('#umBar').style.width = '100%';
-          $('#umProgText').textContent = '설치를 시작합니다…';
+          $('#umProgText').textContent = '업데이트를 준비하는 중이에요. 잠시만 기다려 주세요…';
         } else {
           // 필수 업데이트의 자동 다운로드 완료 — 설치 버튼 활성화.
           if ($('#updateModal').hidden) openUpdateModal(payload);

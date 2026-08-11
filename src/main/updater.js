@@ -147,7 +147,16 @@ function runInstaller() {
   }
   const installDir = path.dirname(process.execPath);
   spawn(downloadedPath, ['--update', '--dir', installDir], { detached: true, stdio: 'ignore' }).unref();
-  setTimeout(() => app.quit(), 400);
+  // 예전엔 400ms 뒤 app.quit() 했지만, 그러면 인스톨러가 압축 해제/부팅되는 몇 초 동안
+  // 화면이 비어 전환이 '느리게' 느껴졌다. 이제 앱 창을 그대로 둔 채 기다린다 →
+  // 인스톨러가 준비되면 스스로 taskkill 로 이 앱을 종료시키므로, 인스톨러 창이 먼저
+  // 뜨고 나서 이 앱이 닫혀 '빈 화면' 구간이 사라진다.
+  // 만약 인스톨러가 끝내 시작되지 않으면(드묾) 창이 '설치 중'에서 멈춰 보이지 않도록,
+  // 45초 뒤에도 이 앱이 살아 있으면(=인스톨러가 taskkill 하지 못함) 재시도 안내를 띄운다.
+  // 정상 설치 시엔 그 전에 인스톨러가 이 앱을 종료시키므로 이 타이머는 실행되지 않는다.
+  setTimeout(() => {
+    emit({ state: 'error', message: '업데이트 설치 프로그램을 시작하지 못했습니다. 다시 시도해 주세요.' });
+  }, 45000);
 }
 
 // 업데이트 기록(릴리스 목록)
