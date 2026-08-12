@@ -1,6 +1,6 @@
 # StellaStatus (스텔라상태)
 
-[한국어](README.md) | **English**
+[한국어](README.md) | **English** | [日本語](README.jp.md)
 
 A Windows desktop app that checks the CHZZK live status of StelLive members and sends a Windows
 notification when a broadcast starts.
