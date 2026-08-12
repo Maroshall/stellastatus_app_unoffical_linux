@@ -52,6 +52,13 @@ body {
 .win-btn:hover { background: rgba(255,255,255,.08); color: var(--text); }
 .win-close:hover { background: #e23b53; color: #fff; }
 
+/* macOS: 네이티브 신호등 버튼(좌측 상단)을 쓴다.
+   - 우측 커스텀 창 버튼(min/max/close)과 구분선은 숨긴다.
+   - 신호등이 브랜드 로고를 가리지 않도록 타이틀바 좌측에 여백을 준다. */
+:root[data-platform="darwin"] .win-btn,
+:root[data-platform="darwin"] .tb-sep { display: none; }
+:root[data-platform="darwin"] .titlebar { padding-left: 82px; }
+
 /* 아이콘 공통(아이콘 팩: Lucide, stroke 스타일) */
 .icon-btn svg, .win-btn svg, .s-ico svg, .btn svg, .viewers svg, .t-ico svg, .toast .t-close svg { display: block; }
 .s-ico { display: grid; place-items: center; color: var(--text-mute); }

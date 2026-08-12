@@ -2,6 +2,10 @@
 ; 시작 / 설치 위치 / 완료 페이지를 nsDialogs 로 새로 그린다.
 ; (설치 진행 페이지는 MUI 관리 페이지라 다크 색상만 적용)
 
+; 지원 OS 판별용 표준 헤더(Windows 버전 / 64비트 여부)
+!include WinVer.nsh
+!include x64.nsh
+
 ; ── 다크 색상 ─────────────────────────────────
 !ifdef MUI_BGCOLOR
   !undef MUI_BGCOLOR
@@ -18,8 +22,19 @@ Var StellaFontT
 Var DirText
 Var StellaRunCheck
 
-; 준비: 사이드바 로고 추출 + 폰트 생성
+; 준비: 지원 OS 확인 → 사이드바 로고 추출 + 폰트 생성
 !macro customInit
+  ; 지원되지 않는 Windows 버전이면 안내 후 설치 중단.
+  ;  - Electron 43(Chromium)은 Windows 10 이상(64비트)만 지원한다.
+  ${IfNot} ${AtLeastWin10}
+    MessageBox MB_OK|MB_ICONSTOP "지원되지 않는 Windows 버전입니다.$\r$\n스텔라상태는 Windows 10 이상에서만 설치할 수 있습니다.$\r$\n$\r$\nThis version of Windows is not supported.$\r$\nStellaStatus requires Windows 10 or later."
+    Quit
+  ${EndIf}
+  ${IfNot} ${RunningX64}
+    MessageBox MB_OK|MB_ICONSTOP "지원되지 않는 시스템입니다.$\r$\n스텔라상태는 64비트 Windows 에서만 설치할 수 있습니다.$\r$\n$\r$\nThis system is not supported.$\r$\nStellaStatus requires 64-bit Windows."
+    Quit
+  ${EndIf}
+
   InitPluginsDir
   File "/oname=$PLUGINSDIR\sidebarLogo.bmp" "${BUILD_RESOURCES_DIR}\sidebarLogo.bmp"
   CreateFont $StellaFontH "$(^Font)" "15" "700"

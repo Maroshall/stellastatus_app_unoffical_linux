@@ -2,6 +2,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // 렌더러(웹 UI)에 노출되는 안전한 API. window.stella 로 접근한다.
 contextBridge.exposeInMainWorld('stella', {
+  // 플랫폼('darwin' | 'win32' | ...) — macOS 는 네이티브 신호등 버튼을 쓰므로 UI 가 분기한다.
+  platform: process.platform,
+
   // 멤버 상태
   getMembers: () => ipcRenderer.invoke('members:get'),
   refresh: () => ipcRenderer.invoke('members:refresh'),

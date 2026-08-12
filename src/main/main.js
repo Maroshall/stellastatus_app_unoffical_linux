@@ -55,7 +55,12 @@ function createWindow() {
     minWidth: 940,
     minHeight: 640,
     show: false,
-    frame: false, // 커스텀 타이틀바 사용
+    // macOS: 네이티브 신호등 버튼(좌측 상단)을 쓰되 타이틀바는 숨겨 콘텐츠를 위로 끌어올린다.
+    //        (trafficLightPosition 으로 커스텀 타이틀바 높이(--tb-h:44px) 중앙에 맞춘다.)
+    // Windows/기타: 프레임을 없애고 우측 커스텀 버튼(min/max/close)을 사용한다.
+    ...(process.platform === 'darwin'
+      ? { titleBarStyle: 'hidden', trafficLightPosition: { x: 14, y: 15 } }
+      : { frame: false }),
     backgroundColor: '#0b0a1a',
     icon: ICON_PATH,
     title: '스텔라상태',

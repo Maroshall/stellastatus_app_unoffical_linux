@@ -2,6 +2,9 @@
 (() => {
   const api = window.stella;
 
+  // 플랫폼별 UI 분기용 속성(예: macOS 는 네이티브 신호등 버튼 → 커스텀 창 버튼 숨김)
+  document.documentElement.setAttribute('data-platform', api.platform || 'unknown');
+
   const state = {
     members: [],
     settings: {},
