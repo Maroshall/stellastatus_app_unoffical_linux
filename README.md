@@ -1,6 +1,6 @@
 # 스텔라상태 (StellaStatus)
 
-**한국어** | [English](README.en.md)
+**한국어** | [English](README.en.md) | [日本語](README.jp.md)
 
 스텔라이브 멤버의 치지직 방송 상태를 확인하고, 방송이 시작되면 윈도우 알림을 보내주는 데스크톱 앱입니다.
 
