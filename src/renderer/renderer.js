@@ -704,6 +704,19 @@
         }
         state.manualUpdateCheck = false;
         break;
+      case 'manual-download':
+        // 인앱 다운로드가 계속 실패해 브라우저 '직접 받기'로 폴백한 경우.
+        state.installing = false;
+        if (state.updateInfo && !$('#updateModal').hidden) {
+          $('#umProgress').hidden = false;
+          $('#umBar').style.width = '100%';
+          $('#umProgText').textContent = '자동 내려받기에 실패해 브라우저에서 받기를 열었어요. 받은 설치 파일을 실행하면 업데이트됩니다.';
+          $('#umInstall').disabled = false;
+          $('#umInstall').textContent = '다시 시도';
+        }
+        showToast({ icon: 'download', title: '브라우저에서 받기를 열었어요', desc: '받은 설치 파일을 실행하면 업데이트됩니다.', duration: 6000 });
+        state.manualUpdateCheck = false;
+        break;
       case 'none':
         closeChecking();
         if (manual) showToast({ icon: 'check', title: '현재 최신 버전이에요', duration: 3500 });

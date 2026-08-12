@@ -46,6 +46,10 @@ function cmpVersion(a, b) {
 }
 
 function download(url, dest, onProgress) {
+  // 받는 동안은 '.part' 임시 파일에 쓰고, 완료되면 최종 이름으로 바꾼다.
+  // %TEMP%\Setup.exe 같은 이름/경로에 exe 를 직접 쓰면 백신(알약 등)이 쓰는 도중
+  // 잠그거나 격리해 '내려받기 오류'가 나기 쉬운데, .part 로 받으면 그 간섭이 크게 준다.
+  const tmp = dest + '.part';
   return new Promise((resolve, reject) => {
     const req = https.get(url, { headers: { 'User-Agent': 'stellastatus' } }, (res) => {
       req.setTimeout(0); // 응답이 시작됐으니 '연결' 타임아웃은 해제하고, 이후엔 아래 스톨 타이머가 관리
@@ -58,7 +62,7 @@ function download(url, dest, onProgress) {
       let got = 0;
       let settled = false;
       let stall = null;
-      const file = fs.createWriteStream(dest);
+      const file = fs.createWriteStream(tmp);
       // 네트워크가 중간에 끊기면 res 스트림에서 error 가 나는데, 이를 처리하지 않으면
       // 프로세스가 죽거나(무처리 예외) 다운로드가 영영 끝나지 않는다. 여기서 깔끔히 실패 처리한다.
       const fail = (err) => {
@@ -66,7 +70,7 @@ function download(url, dest, onProgress) {
         clearTimeout(stall);
         try { res.destroy(); } catch { /* ignore */ }
         try { file.destroy(); } catch { /* ignore */ }
-        fs.unlink(dest, () => reject(err)); // 받다 만 파일 정리 후 실패
+        fs.unlink(tmp, () => reject(err)); // 받다 만 파일 정리 후 실패
       };
       // 데이터가 '전혀' 안 오는 상태가 90초 지속될 때만 멈춘 것으로 보고 실패한다.
       // 매 청크마다 리셋되므로, 느리거나 잠깐 멈칫하는 회선이라도 데이터가 흐르는 한 끊기지 않는다.
@@ -76,7 +80,14 @@ function download(url, dest, onProgress) {
       file.on('error', fail);
       res.on('data', (c) => { got += c.length; bumpStall(); if (total) onProgress(Math.round((got / total) * 100)); });
       res.pipe(file);
-      file.on('finish', () => { if (settled) return; settled = true; clearTimeout(stall); file.close(() => resolve(dest)); });
+      file.on('finish', () => {
+        if (settled) return; settled = true;
+        clearTimeout(stall);
+        file.close(() => {
+          // .part → 최종 이름. 기존 파일이 남아 있으면 지우고(윈도우는 rename 이 덮어쓰기 실패) 바꾼다.
+          fs.rm(dest, { force: true }, () => fs.rename(tmp, dest, (e) => (e ? fail(e) : resolve(dest))));
+        });
+      });
       bumpStall();
     });
     req.on('error', reject);
@@ -165,7 +176,11 @@ async function downloadAndInstall() {
     if (!downloadedPath || !fs.existsSync(downloadedPath)) await downloadPending();
     runInstaller();
   } catch (e) {
-    emit({ state: 'error', message: String(e?.message || e) });
+    // 인앱 다운로드가 재시도까지 다 실패하면(회선/백신 간섭 등), 브라우저로 직접 받도록
+    // 대체 경로를 열어 준다. 어떤 이유로든 사용자가 업데이트를 받을 길을 항상 보장.
+    const url = (pendingDownload && pendingDownload.url) || `https://github.com/${OWNER}/${REPO}/releases/latest`;
+    try { shell.openExternal(url); } catch { /* ignore */ }
+    emit({ state: 'manual-download', message: String(e?.message || e) });
   }
 }
 
