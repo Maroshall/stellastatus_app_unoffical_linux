@@ -6,6 +6,7 @@ const PROFILES = {
   // 1기 — 에버리스 (EVERLASTING)
   'ayatsuno-yuni': {
     nameEng: 'Ayatsuno Yuni',
+    nameJa: '純角ユニ',
     accent: '#6D78E2',
     accent2: '#6D78E2',
     channelUrl: 'https://chzzk.naver.com/45e71a76e949e16a34764deb962f9d9f',
@@ -13,6 +14,7 @@ const PROFILES = {
   },
   'sakihane-huya': {
     nameEng: 'Sakihane Huya',
+    nameJa: '咲羽風夜',
     logoKey: 'sakihane-huya', // 로고 파일명(assets/logos/sakihane-huya.png)
     accent: '#59467C',
     accent2: '#59467C',
@@ -23,6 +25,7 @@ const PROFILES = {
   // 2기 — 유니버스 (UNIVERSE)
   'shirayuki-hina': {
     nameEng: 'Shirayuki Hina',
+    nameJa: '白雪ひな',
     accent: '#EEDDC2',
     accent2: '#EEDDC2',
     channelUrl: 'https://chzzk.naver.com/b044e3a3b9259246bc92e863e7d3f3b8',
@@ -30,6 +33,7 @@ const PROFILES = {
   },
   'neneko-mashiro': {
     nameEng: 'Neneko Mashiro',
+    nameJa: 'ねねこましろ',
     accent: '#525054',
     accent2: '#525054',
     channelUrl: 'https://chzzk.naver.com/4515b179f86b67b4981e16190817c580',
@@ -37,6 +41,7 @@ const PROFILES = {
   },
   'akane-lize': {
     nameEng: 'Akane Lize',
+    nameJa: '朱音リゼ',
     accent: '#8C2830',
     accent2: '#8C2830',
     channelUrl: 'https://chzzk.naver.com/4325b1d5bbc321fad3042306646e2e50',
@@ -44,6 +49,7 @@ const PROFILES = {
   },
   'arahashi-tabi': {
     nameEng: 'Arahashi Tabi',
+    nameJa: '荒波子タビ',
     accent: '#97C3E7',
     accent2: '#97C3E7',
     channelUrl: 'https://chzzk.naver.com/a6c4ddb09cdb160478996007bff35296',
@@ -53,6 +59,7 @@ const PROFILES = {
   // 3기 — 클리셰 (CLICHÉ)
   'tenko-shibuki': {
     nameEng: 'Tenko Shibuki',
+    nameJa: '天狐紫吹',
     accent: '#BDA4E4',
     accent2: '#BDA4E4',
     channelUrl: 'https://chzzk.naver.com/64d76089fba26b180d9c9e48a32600d9',
@@ -60,6 +67,7 @@ const PROFILES = {
   },
   'aokumo-rin': {
     nameEng: 'Aokumo Rin',
+    nameJa: '青雲凜',
     accent: '#3B64BA',
     accent2: '#3B64BA',
     channelUrl: 'https://chzzk.naver.com/516937b5f85cbf2249ce31b0ad046b0f',
@@ -67,6 +75,7 @@ const PROFILES = {
   },
   'hanako-nana': {
     nameEng: 'Hanako Nana',
+    nameJa: '花子ナナ',
     accent: '#D17C85',
     accent2: '#D17C85',
     channelUrl: 'https://chzzk.naver.com/4d812b586ff63f8a2946e64fa860bbf5',
@@ -74,6 +83,7 @@ const PROFILES = {
   },
   'yuzuha-riko': {
     nameEng: 'Yuzuha Riko',
+    nameJa: '柚葉莉子',
     accent: '#AECEA9',
     accent2: '#AECEA9',
     channelUrl: 'https://chzzk.naver.com/8fd39bb8de623317de90654718638b10',
@@ -89,6 +99,7 @@ const KEY_ALIAS = {
 
 const DEFAULT_PROFILE = {
   nameEng: '',
+  nameJa: '',
   accent: '#8a7ffb',
   accent2: '#b6a6ff',
   channelUrl: null,
@@ -99,4 +110,13 @@ function profileFor(key) {
   return PROFILES[key] || PROFILES[KEY_ALIAS[key]] || DEFAULT_PROFILE;
 }
 
-module.exports = { PROFILES, DEFAULT_PROFILE, KEY_ALIAS, profileFor };
+// 로스터(기수) 정렬 순서. PROFILES 정의 순서 = 1기 → 2기 → 3기, 기수 내 데뷔 순.
+// 라이브러리 gen 값에 의존하지 않고 이 순서로 정렬해 항상 일관되게 표시한다.
+const ORDER = Object.keys(PROFILES);
+function orderFor(key) {
+  const k = PROFILES[key] ? key : (KEY_ALIAS[key] || key);
+  const i = ORDER.indexOf(k);
+  return i < 0 ? 999 : i; // 목록에 없는 멤버는 맨 뒤
+}
+
+module.exports = { PROFILES, DEFAULT_PROFILE, KEY_ALIAS, profileFor, orderFor };

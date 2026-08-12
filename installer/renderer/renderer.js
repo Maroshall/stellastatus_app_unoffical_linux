@@ -1,8 +1,10 @@
 (() => {
   const api = window.setup;
+  const I = window.SI18N;
+  const T = (k) => I.t(k);
   const $ = (s) => document.querySelector(s);
 
-  const state = { mode: 'install', step: 'welcome', dir: '', exePath: '', appName: '스텔라상태', version: '' };
+  const state = { mode: 'install', step: 'welcome', dir: '', exePath: '', appName: '스텔라상태', version: '', lang: 'ko' };
 
   // 아이콘 팩(Lucide, MIT)
   const ICONS = {
@@ -19,17 +21,18 @@
   }
   const setIcon = (sel, name, size) => { const el = $(sel); if (el) el.innerHTML = icon(name, size); };
 
+  // 단계 정의(라벨은 렌더 시 현재 언어로 번역)
   const INSTALL_STEPS = [
-    { key: 'welcome', label: '시작' },
-    { key: 'terms', label: '이용약관' },
-    { key: 'location', label: '설치 위치' },
-    { key: 'progress', label: '설치 중' },
-    { key: 'finish', label: '완료' },
+    { key: 'welcome', lk: 'step.welcome' },
+    { key: 'terms', lk: 'step.terms' },
+    { key: 'location', lk: 'step.location' },
+    { key: 'progress', lk: 'step.progress' },
+    { key: 'finish', lk: 'step.finish' },
   ];
   const UNINSTALL_STEPS = [
-    { key: 'welcome', label: '시작' },
-    { key: 'progress', label: '제거 중' },
-    { key: 'finish', label: '완료' },
+    { key: 'welcome', lk: 'step.welcome' },
+    { key: 'progress', lk: 'step.uninProgress' },
+    { key: 'finish', lk: 'step.finish' },
   ];
   const steps = () => (state.mode === 'uninstall' ? UNINSTALL_STEPS : INSTALL_STEPS);
 
@@ -41,7 +44,7 @@
     list.forEach((s, i) => {
       const el = document.createElement('div');
       el.className = 'step' + (i === curIdx ? ' active' : '') + (i < curIdx ? ' done' : '');
-      el.innerHTML = `<span class="num">${i < curIdx ? icon('check', 14) : i + 1}</span><span>${s.label}</span>`;
+      el.innerHTML = `<span class="num">${i < curIdx ? icon('check', 14) : i + 1}</span><span>${T(s.lk)}</span>`;
       host.appendChild(el);
     });
   }
@@ -58,16 +61,16 @@
     const back = $('#btnBack'), next = $('#btnNext'), cancel = $('#btnCancel');
     back.hidden = true; next.hidden = false; cancel.hidden = false; next.disabled = false;
     if (state.mode === 'uninstall') {
-      if (state.step === 'welcome') { next.textContent = '제거'; }
+      if (state.step === 'welcome') { next.textContent = T('btn.uninstall'); }
       else if (state.step === 'progress') { next.hidden = true; cancel.hidden = true; }
-      else if (state.step === 'finish') { next.textContent = '완료'; cancel.hidden = true; }
+      else if (state.step === 'finish') { next.textContent = T('btn.done'); cancel.hidden = true; }
       return;
     }
-    if (state.step === 'welcome') { next.textContent = '다음'; }
-    else if (state.step === 'terms') { back.hidden = false; next.textContent = '다음'; next.disabled = !$('#optAgree').checked; }
-    else if (state.step === 'location') { back.hidden = false; next.textContent = '설치'; }
+    if (state.step === 'welcome') { next.textContent = T('btn.next'); }
+    else if (state.step === 'terms') { back.hidden = false; next.textContent = T('btn.next'); next.disabled = !$('#optAgree').checked; }
+    else if (state.step === 'location') { back.hidden = false; next.textContent = T('btn.install'); }
     else if (state.step === 'progress') { next.hidden = true; cancel.hidden = true; }
-    else if (state.step === 'finish') { next.textContent = '완료'; cancel.hidden = true; }
+    else if (state.step === 'finish') { next.textContent = T('btn.done'); cancel.hidden = true; }
   }
 
   // ── 흐름 ─────────────────────────────────────
@@ -89,10 +92,11 @@
       targetDir: state.dir,
       desktopShortcut: $('#optDesktop').checked,
       startMenuShortcut: $('#optStart').checked,
+      language: state.lang, // 설치 시 선택한 언어를 앱 설정에 기록
     });
     if (!res.ok) {
-      $('#progTitle').textContent = '설치 실패';
-      $('#progText').textContent = res.error || '알 수 없는 오류';
+      $('#progTitle').textContent = T('prog.installFail');
+      $('#progText').textContent = res.error || T('prog.unknownErr');
       return;
     }
     state.exePath = res.exePath;
@@ -106,10 +110,10 @@
 
   async function doUninstall() {
     show('progress');
-    $('#progTitle').textContent = '제거하는 중…';
+    $('#progTitle').textContent = T('prog.uninstalling');
     const res = await api.uninstall();
-    $('#finishTitle').textContent = '제거 완료';
-    $('#finishDesc').innerHTML = res.ok ? '스텔라상태가 제거되었습니다.' : (res.error || '제거 중 오류가 발생했습니다.');
+    $('#finishTitle').textContent = T('unin.doneTitle');
+    $('#finishDesc').innerHTML = res.ok ? T('unin.doneOk') : (res.error || T('unin.doneFail'));
     $('#runRow').hidden = true;
     $('#doneBadge').style.display = res.ok ? '' : 'none';
     show('finish');
@@ -126,7 +130,8 @@
   $('#btnClose').addEventListener('click', () => api.close());
   setIcon('#btnMin', 'minus', 14);
   setIcon('#btnClose', 'x', 14);
-  $('#btnBrowse').innerHTML = icon('folder', 15) + ' 찾아보기';
+  const renderBrowseBtn = () => { $('#btnBrowse').innerHTML = icon('folder', 15) + ' ' + T('btn.browse'); };
+  renderBrowseBtn();
   $('#btnMin').addEventListener('click', () => api.minimize());
   $('#madeBy').addEventListener('click', () => api.openExternal('https://github.com'));
   $('#btnBrowse').addEventListener('click', async () => {
@@ -137,23 +142,23 @@
   api.onProgress((p) => {
     $('#barFill').style.width = (p.percent || 0) + '%';
     $('#progText').textContent = p.text || '';
-    if (state.mode === 'uninstall') $('#progTitle').textContent = '제거하는 중…';
-    else if (state.mode === 'update') $('#progTitle').textContent = p.phase === 'done' ? '업데이트 완료' : '업데이트하는 중…';
-    else $('#progTitle').textContent = p.phase === 'done' ? '설치 완료' : '설치하는 중…';
+    if (state.mode === 'uninstall') $('#progTitle').textContent = T('prog.uninstalling');
+    else if (state.mode === 'update') $('#progTitle').textContent = p.phase === 'done' ? T('prog.updated') : T('prog.updating');
+    else $('#progTitle').textContent = p.phase === 'done' ? T('prog.installed') : T('prog.installing');
   });
 
   // 업데이트(무인) 모드 — 기존 설치 위치에 제자리 덮어쓰기 후 재실행
   async function runUpdate() {
-    $('#progTitle').textContent = '업데이트하는 중…';
+    $('#progTitle').textContent = T('prog.updating');
     show('progress');
     const res = await api.install({ targetDir: state.dir, desktopShortcut: false, startMenuShortcut: false, update: true });
     if (!res.ok) {
-      $('#progTitle').textContent = '업데이트 실패';
-      $('#progText').textContent = res.error || '알 수 없는 오류';
+      $('#progTitle').textContent = T('prog.updateFail');
+      $('#progText').textContent = res.error || T('prog.unknownErr');
       return;
     }
-    $('#progTitle').textContent = '업데이트 완료';
-    $('#progText').textContent = '새 버전을 실행합니다…';
+    $('#progTitle').textContent = T('prog.updated');
+    $('#progText').textContent = T('prog.runNew');
     api.launch(res.exePath);
     setTimeout(() => api.close(), 900);
   }
@@ -171,15 +176,40 @@
       runUpdate();
       return;
     }
-    if (b.mode === 'uninstall') {
-      $('#sideSub').textContent = '제거';
-      $('.panel[data-step="welcome"] .p-title').textContent = '스텔라상태 제거';
-      $('.panel[data-step="welcome"] .p-desc').innerHTML = '스텔라상태를 컴퓨터에서 제거합니다.<br>설치된 파일과 바로가기가 삭제됩니다.';
-      $('.panel[data-step="welcome"] .feature').style.display = 'none';
-      $('.panel[data-step="welcome"] .p-hint').textContent = '[제거]를 누르면 제거를 시작합니다.';
-    }
+    if (b.mode === 'uninstall') applyUninstallText();
     show('welcome');
   });
+
+  // 제거 모드 전용 텍스트(언어 변경 시에도 다시 적용)
+  function applyUninstallText() {
+    $('#sideSub').textContent = T('side.uninstall');
+    $('.panel[data-step="welcome"] .p-title').textContent = T('unin.welTitle');
+    $('.panel[data-step="welcome"] .p-desc').innerHTML = T('unin.welDesc');
+    const feat = $('.panel[data-step="welcome"] .feature');
+    if (feat) feat.style.display = 'none';
+    $('.panel[data-step="welcome"] .p-hint').textContent = T('unin.hint');
+  }
+
+  // 전체 UI 를 현재 언어로 다시 그림
+  function refreshI18n() {
+    I.apply(document);              // data-i18n 정적 텍스트 + 약관 + 타이틀
+    renderBrowseBtn();
+    renderSteps();
+    updateButtons();
+    if (state.mode === 'uninstall') applyUninstallText();
+  }
+
+  // 언어 선택
+  const langSel = $('#langSelect');
+  function setLanguage(l) {
+    state.lang = I.setLang(l);
+    langSel.value = state.lang;
+    refreshI18n();
+  }
+  langSel.addEventListener('change', (e) => setLanguage(e.target.value));
+
+  // 초기 언어: 시스템 로캘 추정(사용자가 상단에서 바꿀 수 있음)
+  setLanguage(I.norm(navigator.language) || 'ko');
 
   // preload boot 가 이미 왔을 수도 있으니 기본 렌더
   renderSteps();

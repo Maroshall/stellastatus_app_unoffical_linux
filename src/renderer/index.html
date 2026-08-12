@@ -24,12 +24,12 @@
     </div>
     <div class="tb-drag"></div>
     <div class="tb-right">
-      <button class="icon-btn" id="btnRefresh" title="새로고침"></button>
-      <button class="icon-btn" id="btnSettings" title="설정"></button>
+      <button class="icon-btn" id="btnRefresh" data-i18n-title="tb.refresh" title="새로고침"></button>
+      <button class="icon-btn" id="btnSettings" data-i18n-title="tb.settings" title="설정"></button>
       <span class="tb-sep"></span>
-      <button class="win-btn" id="winMin" title="최소화"></button>
-      <button class="win-btn" id="winMax" title="최대화"></button>
-      <button class="win-btn win-close" id="winClose" title="닫기"></button>
+      <button class="win-btn" id="winMin" data-i18n-title="tb.min" title="최소화"></button>
+      <button class="win-btn" id="winMax" data-i18n-title="tb.max" title="최대화"></button>
+      <button class="win-btn win-close" id="winClose" data-i18n-title="tb.close" title="닫기"></button>
     </div>
   </header>
 
@@ -37,8 +37,8 @@
     <!-- 히어로 -->
     <section class="hero">
       <div>
-        <p class="hero-eyebrow">STELLA STATUS · 스텔라이브 방송 알리미</p>
-        <h1 class="hero-title" id="heroTitle">지금, 어떤 <b>스텔라</b>를 만나볼까요?</h1>
+        <p class="hero-eyebrow" data-i18n="hero.eyebrow">STELLA STATUS · 스텔라이브 방송 알리미</p>
+        <h1 class="hero-title" id="heroTitle" data-i18n-html="hero.title">지금, 어떤 <b>스텔라</b>를 만나볼까요?</h1>
       </div>
       <div class="live-summary" id="liveSummary">
         <span class="ls-dot"></span>
@@ -50,14 +50,14 @@
     <section class="toolbar">
       <div class="search">
         <span class="s-ico" id="searchIcon"></span>
-        <input id="searchInput" type="text" placeholder="스텔라 이름으로 검색…" />
+        <input id="searchInput" type="text" data-i18n-ph="search.ph" placeholder="스텔라 이름으로 검색…" />
       </div>
       <div class="pills" id="filterPills">
-        <button class="pill active" data-filter="all">전체</button>
-        <button class="pill" data-filter="live"><span class="pill-live-dot"></span>방송중</button>
-        <button class="pill" data-filter="gen1">에버리스</button>
-        <button class="pill" data-filter="gen2">유니버스</button>
-        <button class="pill" data-filter="gen3">클리셰</button>
+        <button class="pill active" data-filter="all" data-i18n="filter.all">전체</button>
+        <button class="pill" data-filter="live"><span class="pill-live-dot"></span><span data-i18n="filter.live">방송중</span></button>
+        <button class="pill" data-filter="gen1" data-i18n="filter.gen1">에버리스</button>
+        <button class="pill" data-filter="gen2" data-i18n="filter.gen2">유니버스</button>
+        <button class="pill" data-filter="gen3" data-i18n="filter.gen3">클리셰</button>
       </div>
     </section>
 
@@ -69,10 +69,10 @@
     <!-- 오늘의 뱅온(시작 시 1회) -->
     <section class="schedule">
       <div class="section-head">
-        <h2>오늘의 뱅온 <span class="src">· StelLight</span></h2>
+        <h2><span data-i18n="sched.title">오늘의 뱅온</span> <span class="src">· StelLight</span></h2>
       </div>
       <div class="h-scroll sched-strip" id="schedStrip">
-        <div class="sched-empty">스케줄을 불러오는 중…</div>
+        <div class="sched-empty" data-i18n="sched.loading">스케줄을 불러오는 중…</div>
       </div>
     </section>
   </main>
@@ -82,11 +82,11 @@
     <div class="modal settings-modal">
       <button class="icon-btn settings-close" id="closeSettings"></button>
       <aside class="settings-nav">
-        <div class="settings-nav-head">설정</div>
-        <button class="nav-item active" data-tab="general"><span class="ni-ico" data-icon="sliders"></span>일반</button>
-        <button class="nav-item" data-tab="notify"><span class="ni-ico" data-icon="bell"></span>알림</button>
-        <button class="nav-item" data-tab="info"><span class="ni-ico" data-icon="info"></span>정보</button>
-        <button class="nav-item nav-contact" id="btnContact"><span class="ni-ico" data-icon="mail"></span>문의하기</button>
+        <div class="settings-nav-head" data-i18n="settings.title">설정</div>
+        <button class="nav-item active" data-tab="general"><span class="ni-ico" data-icon="sliders"></span><span data-i18n="nav.general">일반</span></button>
+        <button class="nav-item" data-tab="notify"><span class="ni-ico" data-icon="bell"></span><span data-i18n="nav.notify">알림</span></button>
+        <button class="nav-item" data-tab="info"><span class="ni-ico" data-icon="info"></span><span data-i18n="nav.info">정보</span></button>
+        <button class="nav-item nav-contact" id="btnContact"><span class="ni-ico" data-icon="mail"></span><span data-i18n="nav.contact">문의하기</span></button>
       </aside>
 
       <div class="settings-main">
@@ -94,24 +94,32 @@
         <!-- 일반 -->
         <section class="tab-panel" data-panel="general">
           <div class="setting-row">
-            <div><div class="s-title">확인 주기</div><div class="s-desc">방송 상태를 확인하는 간격입니다.</div></div>
-            <select id="setInterval">
-              <option value="30">30초</option>
-              <option value="60">1분</option>
-              <option value="120">2분</option>
-              <option value="300">5분</option>
+            <div><div class="s-title" data-i18n="set.language.t">언어 (Language)</div><div class="s-desc" data-i18n="set.language.d">앱 화면에 표시되는 언어를 선택합니다.</div></div>
+            <select id="setLanguage">
+              <option value="ko">한국어</option>
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
             </select>
           </div>
           <div class="setting-row">
-            <div><div class="s-title">썸네일 표시</div><div class="s-desc">방송 중인 카드에 미리보기를 표시합니다.</div></div>
+            <div><div class="s-title" data-i18n="set.interval.t">확인 주기</div><div class="s-desc" data-i18n="set.interval.d">방송 상태를 확인하는 간격입니다.</div></div>
+            <select id="setInterval">
+              <option value="30" data-i18n="iv.30">30초</option>
+              <option value="60" data-i18n="iv.60">1분</option>
+              <option value="120" data-i18n="iv.120">2분</option>
+              <option value="300" data-i18n="iv.300">5분</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <div><div class="s-title" data-i18n="set.thumbs.t">썸네일 표시</div><div class="s-desc" data-i18n="set.thumbs.d">방송 중인 카드에 미리보기를 표시합니다.</div></div>
             <label class="switch"><input type="checkbox" id="setThumbs"><span></span></label>
           </div>
           <div class="setting-row">
-            <div><div class="s-title">닫을 때 트레이로 최소화</div><div class="s-desc">X 를 눌러도 트레이에서 계속 실행됩니다.</div></div>
+            <div><div class="s-title" data-i18n="set.tray.t">닫을 때 트레이로 최소화</div><div class="s-desc" data-i18n="set.tray.d">X 를 눌러도 트레이에서 계속 실행됩니다.</div></div>
             <label class="switch"><input type="checkbox" id="setTray"><span></span></label>
           </div>
           <div class="setting-row">
-            <div><div class="s-title">윈도우 시작 시 자동 실행</div><div class="s-desc">부팅 시 트레이에서 자동으로 시작합니다.</div></div>
+            <div><div class="s-title" data-i18n="set.startup.t">시작 시 자동 실행</div><div class="s-desc" data-i18n="set.startup.d">부팅 시 트레이에서 자동으로 시작합니다.</div></div>
             <label class="switch"><input type="checkbox" id="setStartup"><span></span></label>
           </div>
         </section>
@@ -119,22 +127,22 @@
         <!-- 알림 -->
         <section class="tab-panel" data-panel="notify" hidden>
           <div class="setting-row">
-            <div><div class="s-title">윈도우 알림</div><div class="s-desc">방송이 시작되면 윈도우 알림을 보냅니다.</div></div>
+            <div><div class="s-title" data-i18n="set.notify.t">방송 시작 알림</div><div class="s-desc" data-i18n="set.notify.d">방송이 시작되면 시스템 알림을 보냅니다.</div></div>
             <label class="switch"><input type="checkbox" id="setNotify"><span></span></label>
           </div>
           <div class="setting-block">
-            <div class="s-title">알림 받을 스텔라</div>
-            <div class="s-desc">체크한 스텔라의 방송 시작만 알림을 받습니다.</div>
+            <div class="s-title" data-i18n="set.subList.t">알림 받을 스텔라</div>
+            <div class="s-desc" data-i18n="set.subList.d">체크한 스텔라의 방송 시작만 알림을 받습니다.</div>
             <div class="sub-list" id="subList"></div>
           </div>
 
           <div class="setting-row">
-            <div><div class="s-title">방송 시작 시 브라우저로 열기</div><div class="s-desc">방송이 시작되면 시스템 기본 웹브라우저로 자동으로 엽니다.</div></div>
+            <div><div class="s-title" data-i18n="set.autoOpen.t">방송 시작 시 브라우저로 열기</div><div class="s-desc" data-i18n="set.autoOpen.d">방송이 시작되면 시스템 기본 웹브라우저로 자동으로 엽니다.</div></div>
             <label class="switch"><input type="checkbox" id="setAutoOpen"><span></span></label>
           </div>
           <div class="setting-block">
-            <div class="s-title">브라우저로 열 스텔라</div>
-            <div class="s-desc">체크한 스텔라의 방송만 브라우저로 엽니다.</div>
+            <div class="s-title" data-i18n="set.autoOpenList.t">브라우저로 열 스텔라</div>
+            <div class="s-desc" data-i18n="set.autoOpenList.d">체크한 스텔라의 방송만 브라우저로 엽니다.</div>
             <div class="sub-list" id="autoOpenList"></div>
           </div>
         </section>
@@ -144,59 +152,59 @@
           <div class="about">
             <img class="about-logo" src="assets/logo.png" alt="" />
             <div class="about-name">스텔라<b>상태</b></div>
-            <div class="about-ver">버전 <span id="appVersion">–</span></div>
-            <div class="about-made">Made by 스텔라리움</div>
+            <div class="about-ver"><span data-i18n="about.ver">버전</span> <span id="appVersion">–</span></div>
+            <div class="about-made" data-i18n="about.made">Made by 스텔라리움</div>
             <div class="about-btns">
-              <button class="mini-btn" id="btnCheckUpdate">업데이트 확인</button>
-              <button class="mini-btn ghost" id="btnChangelog">업데이트 기록</button>
-              <button class="mini-btn ghost" id="btnTerms">이용약관</button>
+              <button class="mini-btn" id="btnCheckUpdate" data-i18n="btn.checkUpdate">업데이트 확인</button>
+              <button class="mini-btn ghost" id="btnChangelog" data-i18n="btn.changelog">업데이트 기록</button>
+              <button class="mini-btn ghost" id="btnTerms" data-i18n="btn.terms">이용약관</button>
             </div>
           </div>
 
-          <div class="section-label">데이터 출처</div>
+          <div class="section-label" data-i18n="label.dataSource">데이터 출처</div>
           <div class="lib-list">
             <div class="lib-link" data-url="https://chzzk.naver.com">
-              <div><div class="lib-name">치지직 (CHZZK)</div><div class="lib-desc">방송 상태</div></div>
+              <div><div class="lib-name">치지직 (CHZZK)</div><div class="lib-desc" data-i18n="lib.chzzk.d">방송 상태</div></div>
               <span class="ext-ico" data-icon="external"></span>
             </div>
             <div class="lib-link" data-url="https://stellight.fans">
-              <div><div class="lib-name">StelLight</div><div class="lib-desc">방송 스케줄(뱅온)</div></div>
+              <div><div class="lib-name">StelLight</div><div class="lib-desc" data-i18n="lib.stellight.d">방송 스케줄(뱅온)</div></div>
               <span class="ext-ico" data-icon="external"></span>
             </div>
           </div>
 
-          <div class="section-label">사용된 라이브러리</div>
+          <div class="section-label" data-i18n="label.libs">사용된 라이브러리</div>
           <div class="lib-list">
             <div class="lib-link" data-url="https://github.com/tabiluv/stellastatus">
-              <div><div class="lib-name">stellastatus</div><div class="lib-desc">스텔라이브 방송 상태·스케줄 조회</div></div>
+              <div><div class="lib-name">stellastatus</div><div class="lib-desc" data-i18n="lib.stellastatus.d">스텔라이브 방송 상태·스케줄 조회</div></div>
               <span class="ext-ico" data-icon="external"></span>
             </div>
             <div class="lib-link" data-url="https://github.com/electron/electron">
-              <div><div class="lib-name">Electron</div><div class="lib-desc">데스크톱 앱 프레임워크</div></div>
+              <div><div class="lib-name">Electron</div><div class="lib-desc" data-i18n="lib.electron.d">데스크톱 앱 프레임워크</div></div>
               <span class="ext-ico" data-icon="external"></span>
             </div>
             <div class="lib-link" data-url="https://github.com/electron-userland/electron-builder">
-              <div><div class="lib-name">electron-builder</div><div class="lib-desc">설치 파일 빌드·배포</div></div>
+              <div><div class="lib-name">electron-builder</div><div class="lib-desc" data-i18n="lib.builder.d">설치 파일 빌드·배포</div></div>
               <span class="ext-ico" data-icon="external"></span>
             </div>
             <div class="lib-link" data-url="https://github.com/electron-userland/electron-builder/tree/master/packages/electron-updater">
-              <div><div class="lib-name">electron-updater</div><div class="lib-desc">자동 업데이트</div></div>
+              <div><div class="lib-name">electron-updater</div><div class="lib-desc" data-i18n="lib.updater.d">자동 업데이트</div></div>
               <span class="ext-ico" data-icon="external"></span>
             </div>
             <div class="lib-link" data-url="https://github.com/sindresorhus/electron-store">
-              <div><div class="lib-name">electron-store</div><div class="lib-desc">설정 저장</div></div>
+              <div><div class="lib-name">electron-store</div><div class="lib-desc" data-i18n="lib.store.d">설정 저장</div></div>
               <span class="ext-ico" data-icon="external"></span>
             </div>
             <div class="lib-link" data-url="https://github.com/lucide-icons/lucide">
-              <div><div class="lib-name">Lucide</div><div class="lib-desc">아이콘 팩</div></div>
+              <div><div class="lib-name">Lucide</div><div class="lib-desc" data-i18n="lib.lucide.d">아이콘 팩</div></div>
               <span class="ext-ico" data-icon="external"></span>
             </div>
           </div>
 
-          <div class="section-label">앱 관리</div>
+          <div class="section-label" data-i18n="label.appManage">앱 관리</div>
           <div class="setting-row">
-            <div><div class="s-title">스텔라상태 제거</div><div class="s-desc">이 컴퓨터에서 앱과 바로가기를 삭제합니다.</div></div>
-            <button class="mini-btn danger" id="btnUninstall">제거</button>
+            <div><div class="s-title" data-i18n="uninstall.t">스텔라상태 제거</div><div class="s-desc" data-i18n="uninstall.d">이 컴퓨터에서 앱과 바로가기를 삭제합니다.</div></div>
+            <button class="mini-btn danger" id="btnUninstall" data-i18n="uninstall.btn">제거</button>
           </div>
         </section>
       </div>
@@ -209,20 +217,20 @@
       <div class="um-head">
         <div class="um-badge" id="umBadge"></div>
         <div class="um-headtext">
-          <div class="um-title">새 버전 <b id="umVersion">–</b> 이 나왔어요</div>
-          <div class="um-source">출처: GitHub · <span id="umRepo"></span> · <a class="um-link" id="umLink">릴리스 보기</a></div>
+          <div class="um-title" id="umTitle"></div>
+          <div class="um-source"><span data-i18n="um.source">출처: GitHub</span> · <span id="umRepo"></span> · <a class="um-link" id="umLink" data-i18n="um.viewRelease">릴리스 보기</a></div>
         </div>
       </div>
       <div class="um-notes" id="umNotes"></div>
       <div class="um-progress" id="umProgress">
         <div class="um-bar"><div class="um-bar-fill" id="umBar"></div></div>
-        <div class="um-prog-text" id="umProgText">업데이트를 내려받는 중…</div>
+        <div class="um-prog-text" id="umProgText" data-i18n="um.downloading">업데이트를 내려받는 중…</div>
       </div>
       <div class="um-foot">
-        <div class="um-required" id="umRequired" hidden>안정성을 위한 필수 업데이트입니다.</div>
+        <div class="um-required" id="umRequired" data-i18n="um.required" hidden>안정성을 위한 필수 업데이트입니다.</div>
         <div class="um-actions">
-          <button class="mini-btn ghost" id="umLater">나중에</button>
-          <button class="mini-btn" id="umInstall" disabled>지금 설치</button>
+          <button class="mini-btn ghost" id="umLater" data-i18n="um.later">나중에</button>
+          <button class="mini-btn" id="umInstall" data-i18n="um.install" disabled>지금 설치</button>
         </div>
       </div>
     </div>
@@ -232,18 +240,18 @@
   <div class="modal-backdrop" id="contactModal" hidden>
     <div class="modal contact-modal">
       <button class="icon-btn contact-close" id="closeContact"></button>
-      <div class="cm-head"><h2>문의하기</h2><p>편한 방법으로 문의해 주세요.</p></div>
+      <div class="cm-head"><h2 data-i18n="contact.title">문의하기</h2><p data-i18n="contact.sub">편한 방법으로 문의해 주세요.</p></div>
       <button class="contact-opt" data-contact="email">
         <span class="co-ico" data-icon="mail"></span>
-        <div class="co-text"><div class="co-name">이메일</div><div class="co-sub">contact@stellarium.kr</div></div>
+        <div class="co-text"><div class="co-name" data-i18n="contact.email">이메일</div><div class="co-sub">contact@stellarium.kr</div></div>
       </button>
       <button class="contact-opt" data-contact="github">
         <span class="co-ico" data-icon="info"></span>
-        <div class="co-text"><div class="co-name">GitHub 이슈</div><div class="co-sub">버그 신고 · 기능 제안</div></div>
+        <div class="co-text"><div class="co-name" data-i18n="contact.github">GitHub 이슈</div><div class="co-sub" data-i18n="contact.githubSub">버그 신고 · 기능 제안</div></div>
       </button>
       <button class="contact-opt" data-contact="x">
         <span class="co-ico" data-icon="external"></span>
-        <div class="co-text"><div class="co-name">X (트위터)</div><div class="co-sub" id="coXsub">DM 문의</div></div>
+        <div class="co-text"><div class="co-name" data-i18n="contact.x">X (트위터)</div><div class="co-sub" id="coXsub">DM 문의</div></div>
       </button>
     </div>
   </div>
@@ -252,19 +260,8 @@
   <div class="modal-backdrop" id="termsModal" hidden>
     <div class="modal changelog-modal">
       <button class="icon-btn changelog-close" id="closeTerms"></button>
-      <div class="cl-head"><h2>이용약관</h2></div>
-      <div class="cl-list terms-view">
-        <p class="t-h">스텔라상태 이용약관</p>
-        <p><b>제1조 (목적 및 동의)</b><br>본 약관은 스텔라상태(이하 "앱")의 설치와 사용에 관한 조건을 정합니다. 이용자가 앱을 설치·실행함으로써 본 약관에 동의한 것으로 봅니다.</p>
-        <p><b>제2조 (라이선스)</b><br>앱은 MIT 라이선스로 제공되며, 개인적·비상업적 용도로 자유롭게 사용·복제·배포할 수 있습니다.</p>
-        <p><b>제3조 (사용 라이브러리 및 데이터)</b><br>앱은 오픈소스 라이브러리 stellastatus를 사용하여 방송 상태와 방송 스케줄(뱅온) 정보를 조회합니다. 해당 라이브러리는 치지직(CHZZK)의 방송 상태와 StelLight의 스케줄 등 공개 데이터를 기반으로 동작하며, 라이브러리 또는 원 서비스의 정책·구조 변경에 따라 일부 기능이 제한되거나 중단될 수 있습니다.</p>
-        <p><b>제4조 (비공식 고지)</b><br>본 앱은 스텔라이브 및 관련 서비스의 공식 제작물이 아닌, 팬이 제작한 비공식 도구입니다.</p>
-        <p><b>제5조 (책임의 제한)</b><br>앱은 "있는 그대로(as-is)" 제공됩니다. 제작자는 앱의 사용 또는 사용 불능으로 발생하는 어떠한 직접·간접 손해에 대해서도 책임지지 않습니다.</p>
-        <p><b>제6조 (개인정보)</b><br>앱은 이용자의 개인정보를 별도로 수집·전송하지 않으며, 모든 설정은 이용자의 PC에만 저장됩니다.</p>
-        <p><b>제7조 (자동 업데이트)</b><br>앱은 최신 버전 확인 및 업데이트 파일 다운로드를 위해 배포처(GitHub)에 접속할 수 있습니다.</p>
-        <p><b>제8조 (금지 행위)</b><br>데이터 출처 서버에 과도한 부하를 유발하는 개조·자동화·대량 요청 등의 행위를 금합니다.</p>
-        <p><b>제9조 (약관의 변경)</b><br>본 약관은 앱의 업데이트와 함께 변경될 수 있으며, 변경된 약관은 앱 내 정보 화면 또는 배포처를 통해 고지됩니다.</p>
-      </div>
+      <div class="cl-head"><h2 data-i18n="terms.title">이용약관</h2></div>
+      <div class="cl-list terms-view" id="termsBody"></div>
     </div>
   </div>
 
@@ -272,11 +269,12 @@
   <div class="modal-backdrop" id="changelogModal" hidden>
     <div class="modal changelog-modal">
       <button class="icon-btn changelog-close" id="closeChangelog"></button>
-      <div class="cl-head"><h2>업데이트 기록</h2></div>
-      <div class="cl-list" id="clList"><div class="cl-empty">불러오는 중…</div></div>
+      <div class="cl-head"><h2 data-i18n="changelog.title">업데이트 기록</h2></div>
+      <div class="cl-list" id="clList"><div class="cl-empty" data-i18n="changelog.loading">불러오는 중…</div></div>
     </div>
   </div>
 
+  <script src="i18n.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

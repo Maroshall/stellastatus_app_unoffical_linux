@@ -14,6 +14,8 @@ const {
 } = require('electron');
 const updater = require('./updater');
 const store = require('./store');
+const i18n = require('./i18n');
+const { translateBatch } = require('./translate');
 const { Poller, MIN_INTERVAL_SEC } = require('./poller');
 
 const APP_ID = 'com.stellastatus.app';
@@ -121,27 +123,30 @@ function createTray() {
   tray.on('click', () => showWindow());
 }
 
+let lastTrayMembers = [];
 function rebuildTrayMenu(members) {
+  if (!tray) return;
+  lastTrayMembers = members; // 언어 변경 시 같은 목록으로 다시 그리기 위해 보관
   const live = members.filter((m) => m.isLive);
   const liveItems = live.length
     ? live.map((m) => ({
-        label: `🔴 ${m.name}  ${m.viewerCount != null ? `· ${m.viewerCount.toLocaleString()}명` : ''}`,
+        label: `🔴 ${i18n.memberName(m)}  ${m.viewerCount != null ? i18n.t('tray.viewers', { n: m.viewerCount.toLocaleString() }) : ''}`,
         click: () => shell.openExternal(m.liveUrl),
       }))
-    : [{ label: '방송 중인 멤버가 없습니다', enabled: false }];
+    : [{ label: i18n.t('tray.noLive'), enabled: false }];
 
   const menu = Menu.buildFromTemplate([
-    { label: `스텔라상태 · 현재 ${live.length}명 방송 중`, enabled: false },
+    { label: i18n.t('tray.header', { n: live.length }), enabled: false },
     { type: 'separator' },
     ...liveItems,
     { type: 'separator' },
-    { label: '창 열기', click: () => showWindow() },
-    { label: '지금 새로고침', click: () => poller.pollOnce() },
+    { label: i18n.t('tray.open'), click: () => showWindow() },
+    { label: i18n.t('tray.refresh'), click: () => poller.pollOnce() },
     { type: 'separator' },
-    { label: '종료', click: () => quitApp() },
+    { label: i18n.t('tray.quit'), click: () => quitApp() },
   ]);
   tray.setContextMenu(menu);
-  if (tray) tray.setToolTip(`스텔라상태 · ${live.length}명 방송 중`);
+  tray.setToolTip(i18n.t('tray.tooltip', { n: live.length }));
 }
 
 function quitApp() {
@@ -169,8 +174,8 @@ function notifyLive(member) {
   if (!Notification.isSupported()) return;
 
   const n = new Notification({
-    title: `🔴 ${member.name} 님이 방송을 시작했어요!`,
-    body: member.title || '치지직에서 라이브 중입니다.',
+    title: i18n.t('notify.liveTitle', { name: i18n.memberName(member) }),
+    body: member.title || i18n.t('notify.liveBody'),
     icon: ICON_PATH,
     silent: false,
   });
@@ -184,10 +189,8 @@ let lastNotifiedUpdate = null;
 function notifyUpdate(info) {
   if (!Notification.isSupported()) return;
   const n = new Notification({
-    title: `새 버전 ${info.version} 업데이트`,
-    body: info.mandatory
-      ? '안정성을 위한 필수 업데이트가 있어요. 클릭해서 업데이트하세요.'
-      : '새로운 업데이트가 있어요. 클릭해서 확인하세요.',
+    title: i18n.t('notify.updTitle', { v: info.version }),
+    body: info.mandatory ? i18n.t('notify.updBodyReq') : i18n.t('notify.updBody'),
     icon: ICON_PATH,
     silent: false,
   });
@@ -234,7 +237,17 @@ function registerIpc() {
     if ('launchAtStartup' in patch && patch.launchAtStartup !== before.launchAtStartup) {
       applyLaunchAtStartup(patch.launchAtStartup);
     }
+    // 언어가 바뀌면 트레이 메뉴/툴팁을 새 언어로 다시 그린다(알림은 표시 시점에 현재 언어 사용).
+    if ('language' in patch && patch.language !== before.language) {
+      rebuildTrayMenu(lastTrayMembers);
+    }
     return store.store;
+  });
+
+  // 방송 제목 번역(베스트 에포트). 렌더러가 en/ja 일 때만 호출한다.
+  ipcMain.handle('i18n:translate', async (_e, payload) => {
+    try { return await translateBatch(payload?.texts, payload?.target); }
+    catch { return {}; }
   });
 
   ipcMain.handle('schedule:today', async () => {

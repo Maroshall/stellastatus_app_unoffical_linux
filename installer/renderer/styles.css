@@ -117,3 +117,16 @@ body { font-family: var(--font); color: var(--text); background: var(--bg); over
 .update-mode .body { padding: 26px; }
 .update-mode .spin-logo img { width: 54px; height: 54px; }
 .update-mode .bar { width: 300px; }
+
+/* 언어 선택(타이틀바) — i18n */
+.lang-select {
+  -webkit-app-region: no-drag;
+  background: rgba(255,255,255,.08);
+  color: #f3eef0;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 7px;
+  font: inherit; font-size: 12px;
+  padding: 3px 8px; margin-right: 8px; cursor: pointer;
+}
+.lang-select:hover { background: rgba(255,255,255,.14); }
+.lang-select option { color: #111; }

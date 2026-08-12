@@ -21,6 +21,9 @@ contextBridge.exposeInMainWorld('stella', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
 
+  // 방송 제목 번역(en/ja). { [원문]: 번역문 } 반환.
+  translate: (texts, target) => ipcRenderer.invoke('i18n:translate', { texts, target }),
+
   // 외부 링크 / 창 제어
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
   minimize: () => ipcRenderer.send('window:minimize'),

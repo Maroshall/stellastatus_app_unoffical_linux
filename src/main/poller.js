@@ -1,5 +1,5 @@
 const { EventEmitter } = require('events');
-const { profileFor } = require('./roster');
+const { profileFor, orderFor } = require('./roster');
 
 const CHZZK_PUBLIC = 'https://api.chzzk.naver.com';
 const MIN_INTERVAL_SEC = 30;
@@ -73,9 +73,12 @@ class Poller extends EventEmitter {
       id: meta.id,
       name: meta.name,
       nameEng: p.nameEng,
+      nameJa: p.nameJa,
       logo: p.logoKey || meta.key, // 로고 파일명(assets/logos/<logo>.png)
       gen: meta.gen,
       genName: meta.genName,
+      order: orderFor(meta.key), // 로스터(기수) 정렬 순서
+
       accent: p.accent,
       accent2: p.accent2,
       emoji: p.emoji,

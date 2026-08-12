@@ -1,6 +1,24 @@
 const path = require('path');
+const fs = require('fs');
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const core = require('./installer-core');
+
+// 설치 시 선택한 언어를 앱(StellaStatus)의 설정 파일에 기록한다.
+//  - 앱은 electron-store 로 %APPDATA%/StellaStatus/config.json 을 읽는다(앱 name=productName='StellaStatus').
+//  - 첫 실행 전에 language 를 심어두면 앱이 그 언어로 시작한다. (기존 설정이 있으면 병합)
+function writeAppLanguage(lang) {
+  try {
+    if (!['ko', 'en', 'ja'].includes(lang)) return;
+    const roaming = process.env.APPDATA || path.join(app.getPath('home'), 'AppData', 'Roaming');
+    const dir = path.join(roaming, 'StellaStatus');
+    const file = path.join(dir, 'config.json');
+    fs.mkdirSync(dir, { recursive: true });
+    let cfg = {};
+    try { cfg = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* 없으면 새로 */ }
+    cfg.language = lang;
+    fs.writeFileSync(file, JSON.stringify(cfg, null, 2));
+  } catch { /* 설정 기록 실패는 설치를 막지 않는다 */ }
+}
 
 const isUninstall = process.argv.includes('--uninstall');
 const isUpdate = process.argv.includes('--update');
@@ -61,6 +79,8 @@ ipcMain.handle('install', async (_e, opts) => {
       ...opts,
       onProgress: (p) => win.webContents.send('progress', p),
     });
+    // 선택한 언어를 앱 설정에 기록(업데이트 모드에서는 기존 언어 유지 위해 건너뜀)
+    if (opts && opts.language && !opts.update) writeAppLanguage(opts.language);
     return { ok: true, ...result };
   } catch (e) {
     return { ok: false, error: String(e?.message || e) };
