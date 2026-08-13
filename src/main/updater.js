@@ -127,7 +127,7 @@ async function check({ manual = false } = {}) {
     const info = {
       version: String(latest).replace(/^v/, ''),
       mandatory: isMandatory(rel.body),
-      notes: (rel.body || '').replace(/<!--[\s\S]*?-->/g, '').trim(),
+      notes: (rel.body || '').replace(/<!--(?!\s*i18n:)[\s\S]*?-->/g, '').trim(),
       repo: `${OWNER}/${REPO}`,
       htmlUrl: rel.html_url || `https://github.com/${OWNER}/${REPO}/releases/latest`,
     };
@@ -221,7 +221,7 @@ async function getReleases() {
       .filter((r) => !r.draft)
       .map((r) => ({
         version: String(r.tag_name || r.name || '').replace(/^v/, ''),
-        notes: (r.body || '').replace(/<!--[\s\S]*?-->/g, '').trim(),
+        notes: (r.body || '').replace(/<!--(?!\s*i18n:)[\s\S]*?-->/g, '').trim(),
         date: (r.published_at || r.created_at || '').slice(0, 10),
         htmlUrl: r.html_url,
       }));

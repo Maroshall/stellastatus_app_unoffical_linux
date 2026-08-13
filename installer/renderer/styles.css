@@ -67,7 +67,8 @@ body { font-family: var(--font); color: var(--text); background: var(--bg); over
 .opts { margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
 .check { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--dim); cursor: pointer; }
 .check input { display: none; }
-.check span { width: 20px; height: 20px; border-radius: 6px; border: 1px solid var(--brd); background: var(--panel-2); display: grid; place-items: center; flex-shrink: 0; transition: .15s; }
+/* 체크박스 시각 요소는 input 바로 뒤 span 만. (라벨 텍스트 span 까지 20px 박스로 만들지 않도록) */
+.check input + span { width: 20px; height: 20px; border-radius: 6px; border: 1px solid var(--brd); background: var(--panel-2); display: grid; place-items: center; flex-shrink: 0; transition: .15s; }
 .check input:checked + span { background: var(--accent); border-color: transparent; }
 .check input:checked + span::after { content: ""; width: 10px; height: 6px; border-left: 2px solid #1c1720; border-bottom: 2px solid #1c1720; transform: rotate(-45deg) translateY(-1px); }
 .check.run { justify-content: center; margin-top: 22px; color: var(--text); }

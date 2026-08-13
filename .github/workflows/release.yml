@@ -85,7 +85,11 @@ jobs:
 
       - name: Build macOS dmg (unsigned)
         # arch 를 명시하지 않으면 호스트(arm64)만 빌드된다. Intel(x64) 까지 만들려면 둘 다 지정.
-        run: npx electron-builder --mac dmg --arm64 --x64 --publish never
+        # ⚠️ productName 을 반드시 ASCII("StellaStatus")로 오버라이드한다.
+        #    (electron-builder.yml 의 productName='스텔라상태' 를 그대로 쓰면 헬퍼 앱이
+        #     '스텔라상태 Helper (GPU).app' 처럼 한글 경로가 되어, macOS 에서 앱이
+        #     실행 시 SIGTRAP 으로 크래시한다. Windows 는 한글 productName 이 문제없다.)
+        run: npx electron-builder --mac dmg --arm64 --x64 -c.productName=StellaStatus --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false   # 미서명: 키체인 인증서 자동탐색 비활성화
 
