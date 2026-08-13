@@ -1,21 +1,20 @@
-<!-- force-update -->
 <!-- i18n:ko -->
-## 스텔라상태 v1.0.5
+## 스텔라상태 v1.0.5.1 (베타)
 
-v1.0.4 버전에서 작동하지 않던 macOS 버전을 수정하여 이번 버전부터 실행이 가능합니다.
-v1.0.4를 이용하시는 분들은 **릴리스 보기 클릭 후 깃허브 릴리즈 페이지에서 최신 버전**을 설치해 주시기 바랍니다.
+> 이 버전은 정식 출시 전 **베타(시험판)** 입니다. 설정 → 일반 → **"베타 버전 받기"** 를 켠 분께 안내됩니다.
+> 사용 중 이상이 있으면 설정 → 정보 → **문제 신고** 로 알려주세요. 정식(안정) 버전을 원하시면 v1.0.5 를 사용하세요.
 
 스텔라상태를 이용해주시는 분들께 진심으로 감사드립니다.
 
 ### 이번 버전 변경 내용
-- **앱 언어 선택** — **한국어 · English · 日本語** (설정 → 일반, Windows 는 설치 시에도 선택). 멤버 이름·기수 이름도 언어에 맞게 표시됩니다.
-- **방송 제목 자동 번역** — 영어/일본어로 볼 때 방송 제목이 해당 언어로 번역됩니다.
-- **스텔라 고정(즐겨찾기)** — 원하는 멤버를 목록 맨 위에 고정할 수 있습니다. (카드의 ★ 버튼)
-- **오늘의 뱅온 개선** — 오늘 일정만 표시하도록 정리하고, **방송 중**과 **종료**를 구분해 보여줍니다.
-- **macOS** 최신 버전에서 앱이 실행되지 않던 문제를 해결했습니다.
-- **macOS** 창 버튼(닫기·최소화·전체화면)을 macOS 기본 방식대로 **좌측 상단**에 표시하도록 변경했습니다.
-- 지원되지 않는 OS 버전에서 설치·실행 시 안내가 표시되도록 했습니다.
-- 앱 엔진을 업데이트했습니다.
+- **오늘의 뱅온 상세 보기** — 뱅온 카드를 누르면 멤버·시각·상태와, 방송 중이면 **제목·카테고리·시청자 수·썸네일**을 볼 수 있습니다.
+- **뱅온 제목 표시 개선** — 제목이 카드보다 길 때 양쪽 끝 글자가 가려지던 문제를 고쳤습니다.
+- **일본어 검색 개선** — 일본어로 검색할 때 **히라가나로만 입력해도** 멤버가 검색됩니다.
+- **방송 카테고리 표기** — 영어/일본어로 볼 때 "저챗"이 **Talk / トーク** 로 표시됩니다.
+- **썸네일 자동 갱신** — 방송 중 카드 썸네일이 갱신되지 않던 문제를 고쳤습니다.
+- **베타 버전 받기** — 설정 → 일반에서 켜면 정식 출시 전 베타를 먼저 받아볼 수 있습니다.
+- **알림 테스트 · 시스템 정보 복사** — 설정에 진단용 버튼을 추가했습니다. (알림 문제 확인, 문제 신고 시 정보 첨부)
+- **macOS 알림** 이 뜨지 않던 문제를 개선하고, 알림이 차단된 경우 안내가 표시됩니다.
 
 ### 설치 방법
 **Windows**
@@ -33,22 +32,23 @@ v1.0.4를 이용하시는 분들은 **릴리스 보기 클릭 후 깃허브 릴�
 - **macOS** — macOS 12 (Monterey) 이상
 
 <!-- i18n:en -->
-## StellaStatus v1.0.5
+## StellaStatus v1.0.5.1 (Beta)
 
-The macOS build that failed to launch in v1.0.4 has been fixed and now runs from this version.
-If you are on v1.0.4, please click **View release** and install the latest version from the GitHub releases page.
+> This is a **beta (test build)** released before the stable version. It is offered to users who turned on
+> Settings → General → **"Get beta versions"**. If something looks off, please report it via Settings → About → Report a problem.
+> For the stable build, use v1.0.5.
 
 Thank you so much for using StellaStatus.
 
 ### What’s new
-- You can choose the app language: 한국어 · English · 日本語. Member and generation names are localized too.
-- Broadcast titles are translated automatically when viewing in English or Japanese.
-- You can pin your favorite Stella to the top of the list.
-- Today’s schedule now shows only today, and separates live streams from ended ones.
-- Fixed the app failing to launch on recent macOS versions.
-- Moved the window buttons to the top-left.
-- Added a notice when installing or running on an unsupported OS version.
-- Updated the app engine.
+- **Today’s schedule details** — tap a schedule card to see the member, time, and status, plus the **title, category, viewer count, and thumbnail** when they’re live.
+- **Schedule title display** — fixed the ends of long titles being clipped by the fade.
+- **Japanese search** — you can now find members by typing **hiragana only**.
+- **Category label** — "저챗" now shows as **Talk / トーク** in English and Japanese.
+- **Thumbnail refresh** — fixed live card thumbnails not updating.
+- **Get beta versions** — turn it on in Settings → General to receive betas before the stable release.
+- **Test notification · Copy system info** — added diagnostic buttons in Settings (check notifications, attach info to a report).
+- **macOS notifications** — improved delivery and now shows guidance when notifications are blocked.
 
 ### How to install
 **Windows**
@@ -66,22 +66,22 @@ Thank you so much for using StellaStatus.
 - **macOS** — macOS 12 (Monterey) or later
 
 <!-- i18n:ja -->
-## StellaStatus v1.0.5
+## StellaStatus v1.0.5.1 (ベータ)
 
-v1.0.4 で起動しなかった macOS 版を修正し、本バージョンから実行できるようになりました。
-v1.0.4 をご利用の方は、**「リリースを見る」をクリックし GitHub のリリースページから最新版**をインストールしてください。
+> このバージョンは正式リリース前の **ベータ（試験版）** です。設定 → 一般 → **「ベータ版を受け取る」** をオンにした方に案内されます。
+> 不具合があれば、設定 → 情報 → 問題を報告 からお知らせください。安定版をご希望の場合は v1.0.5 をご利用ください。
 
 StellaStatus をご利用いただきありがとうございます。
 
 ### 変更内容
-- アプリの言語を 한국어 · English · 日本語 から選べます。メンバー名・世代名も言語に合わせて表示されます。
-- 英語・日本語で表示するとき、配信タイトルが自動的に翻訳されます。
-- お気に入りのステラをリストの最上部に固定できます。
-- 今日の配信予定が今日の分のみ表示され、配信中と終了を区別して表示します。
-- 最近の macOS でアプリが起動しない問題を修正しました。
-- ウィンドウのボタンを左上に移動しました。
-- 非対応の OS バージョンでのインストール・実行時に案内を表示します。
-- アプリのエンジンを更新しました。
+- **今日の配信予定の詳細** — 予定カードをタップすると、メンバー・時刻・状態に加え、配信中は **タイトル・カテゴリ・視聴者数・サムネイル** を確認できます。
+- **予定タイトルの表示** — タイトルが長いとき両端の文字が隠れる問題を修正しました。
+- **日本語検索の改善** — **ひらがなだけで入力**してもメンバーを検索できます。
+- **カテゴリ表記** — 英語・日本語で「저챗」が **Talk / トーク** と表示されます。
+- **サムネイルの自動更新** — 配信中カードのサムネイルが更新されない問題を修正しました。
+- **ベータ版を受け取る** — 設定 → 一般 でオンにすると、正式リリース前のベータを先に受け取れます。
+- **通知テスト・システム情報をコピー** — 設定に診断用ボタンを追加しました（通知の確認、報告時の情報添付）。
+- **macOS の通知** が表示されない問題を改善し、通知がブロックされている場合は案内を表示します。
 
 ### インストール方法
 **Windows**

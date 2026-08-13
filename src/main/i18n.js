@@ -16,6 +16,8 @@ const STR = {
     'notify.updTitle': '새 버전 {v} 업데이트',
     'notify.updBodyReq': '안정성을 위한 필수 업데이트가 있어요. 클릭해서 업데이트하세요.',
     'notify.updBody': '새로운 업데이트가 있어요. 클릭해서 확인하세요.',
+    'notify.testTitle': '🔔 알림 테스트',
+    'notify.testBody': '이 알림이 보이면 알림이 정상적으로 동작하고 있어요.',
   },
   en: {
     'tray.header': 'StellaStatus · {n} live now',
@@ -30,6 +32,8 @@ const STR = {
     'notify.updTitle': 'Update {v} available',
     'notify.updBodyReq': 'A required update is available. Click to update.',
     'notify.updBody': 'A new update is available. Click to view.',
+    'notify.testTitle': '🔔 Notification test',
+    'notify.testBody': 'If you can see this, notifications are working.',
   },
   ja: {
     'tray.header': 'StellaStatus · 現在 {n}人 配信中',
@@ -44,6 +48,8 @@ const STR = {
     'notify.updTitle': '新しいバージョン {v}',
     'notify.updBodyReq': '安定性のための必須アップデートがあります。クリックして更新してください。',
     'notify.updBody': '新しいアップデートがあります。クリックして確認してください。',
+    'notify.testTitle': '🔔 通知テスト',
+    'notify.testBody': 'この通知が表示されれば、通知は正常に動作しています。',
   },
 };
 

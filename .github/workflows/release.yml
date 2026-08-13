@@ -1,7 +1,6 @@
 name: Release
 
-# v* 태그를 푸시하면 커스텀 인스톨러(스텔라상태 Setup.exe)를 빌드하고,
-# (설정된 경우) SignPath Foundation 으로 코드 서명한 뒤 GitHub Releases 에 업로드한다.
+# v* 태그를 푸시하면 커스텀 인스톨러(스텔라상태 Setup.exe)를 빌드해 GitHub Releases 에 업로드한다.
 on:
   push:
     tags:
@@ -29,29 +28,20 @@ jobs:
       - name: Build custom installer (스텔라상태 Setup.exe)
         run: npm run build-setup
 
-      # ── 코드 서명(SignPath) ──────────────────────────────
-      # 아래 리포지토리 변수/시크릿이 설정되면 자동으로 서명한다. (미설정 시 건너뜀)
-      #   Variables: SIGNPATH_ORGANIZATION_ID, SIGNPATH_PROJECT_SLUG, SIGNPATH_SIGNING_POLICY_SLUG
-      #   Secret:    SIGNPATH_API_TOKEN
-      - name: Upload unsigned installer (for SignPath)
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
-        id: unsigned
-        uses: actions/upload-artifact@v4
-        with:
-          name: unsigned-setup
-          path: dist-installer/스텔라상태 Setup.exe
-
-      - name: Sign with SignPath
-        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
-        uses: signpath/github-action-submit-signing-request@v1
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
-          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
-          wait-for-completion: true
-          output-artifact-directory: dist-installer
+      # 태그가 vX.Y.Z.n (네 자리) 이면 베타(Pre-release), vX.Y.Z 이면 정식(Latest)으로 표시한다.
+      # (VERSIONING.md 의 버전 규칙과 일치. 업데이터는 '베타 버전 받기' 토글이 켜진 사용자에게만
+      #  Pre-release 를 안내하므로, 여기서 prerelease 플래그를 올바로 세팅하는 것이 중요하다.)
+      - name: Determine release channel
+        id: channel
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_NAME}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "→ 베타(Pre-release) 릴리스: ${GITHUB_REF_NAME}"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "→ 정식(Latest) 릴리스: ${GITHUB_REF_NAME}"
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -61,7 +51,7 @@ jobs:
           files: dist-installer/*.exe
           fail_on_unmatched_files: true
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.channel.outputs.prerelease }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

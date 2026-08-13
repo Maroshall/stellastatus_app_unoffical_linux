@@ -18,6 +18,7 @@
     updateSnoozed: false, // [나중에] 누르면 이번 실행 동안 자동 알림을 숨긴다(완전 재시작 시 초기화)
     installing: false,    // [설치하기] 눌러 다운로드/설치가 진행 중인지
     visibleKeys: new Set(),
+    thumbStamp: 0, // 폴링 갱신 시각 — 라이브 썸네일 캐시 무효화용(아래 bustThumb 참고)
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -180,6 +181,15 @@
   }
 
   // ── 멤버 카드 렌더 ───────────────────────────
+  // 치지직 라이브 썸네일은 방송이 진행돼도 URL 문자열이 그대로라, 브라우저 캐시 때문에
+  // 처음 받은 이미지에서 '정지'된 것처럼 보인다. 폴링 갱신 시각(thumbStamp)을 쿼리로 붙여
+  // 매 갱신마다 이미지를 새로 받아오게 한다. (필터/검색/언어 변경 등 같은 폴링 내 리렌더에서는
+  //  stamp 가 그대로라 불필요한 재요청/깜빡임이 없다.)
+  function bustThumb(url) {
+    if (!url) return url;
+    return url + (url.includes('?') ? '&' : '?') + '_=' + (state.thumbStamp || 0);
+  }
+
   function memberCard(m) {
     const card = document.createElement('article');
     card.className = 'card' + (m.isLive ? ' live' : '') + (isPinned(m.key) ? ' pinned' : '');
@@ -194,7 +204,7 @@
     // 오프라인/썸네일 끔: 멤버 로고(로컬 → 치지직 → 별)
     const logoInner = `<img class="mlogo" src="assets/logos/${esc(m.logo || m.key)}.png" alt="">`;
     const thumb = liveThumb
-      ? `<img class="mthumb" src="${esc(m.thumbnail)}" alt="">`
+      ? `<img class="mthumb" src="${esc(bustThumb(m.thumbnail))}" alt="">`
       : `<div class="thumb-logo">${logoInner}</div>`;
 
     const openMs = m.isLive ? parseOpen(m.openDate) : null;
@@ -210,7 +220,7 @@
 
     const titleHtml = m.isLive
       ? `<div class="m-title"${m.title ? ` data-tt="${esc(m.title)}"` : ''}>${esc(m.title || T('card.liveDefault'))}</div>
-         <div class="m-category">${esc(m.category || '')}</div>`
+         <div class="m-category"${m.category ? ` data-tt="${esc(m.category)}"` : ''}>${esc(m.category || '')}</div>`
       : `<div class="m-title offline">${m.error ? T('card.offErr') : T('card.offIdle')}</div>
          <div class="m-category"></div>`;
 
@@ -262,6 +272,15 @@
     renderSchedule(true); // 오늘의 뱅온도 즐겨찾기 반영해 재정렬
   }
 
+  // 검색어/이름 정규화: 소문자화 + 카타카나→히라가나 통일 + 공백 제거.
+  // 히라가나로만 입력해도 카타카나가 섞인 이름(예: 純角ユニ, 独음 あやつのゆに)이 매칭된다.
+  function kana(s) {
+    return String(s || '')
+      .toLowerCase()
+      .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
+      .replace(/\s+/g, '');
+  }
+
   function applyFilter(list) {
     let out = list;
     if (state.filter === 'live') out = out.filter((m) => m.isLive);
@@ -269,8 +288,16 @@
     else if (state.filter === 'gen2') out = out.filter((m) => m.gen === 2);
     else if (state.filter === 'gen3') out = out.filter((m) => m.gen === 3);
     if (state.search) {
-      const q = state.search.toLowerCase();
-      out = out.filter((m) => m.name.toLowerCase().includes(q) || (m.nameEng || '').toLowerCase().includes(q));
+      // 한국어(name)·영어(nameEng)·일본어(nameJa)·히라가나 독음(nameJaKana)을 모두 대상으로 검색한다.
+      // (현재 UI 언어와 무관하게 어떤 표기로 입력해도 찾을 수 있도록 여러 필드를 함께 본다)
+      // kana(): 카타카나를 히라가나로 통일해, 히라가나로만 입력해도 카타카나 이름(예: ユニ)이 매칭되게 한다.
+      const q = kana(state.search);
+      out = out.filter((m) =>
+        kana(m.name).includes(q)
+        || kana(m.nameEng).includes(q)
+        || kana(m.nameJa).includes(q)
+        || kana(m.nameJaKana).includes(q)
+      );
     }
     // 고정(즐겨찾기) 최상단 → 방송 중 → 기수(로스터) 순
     const pr = (m) => (isPinned(m.key) ? 0 : 1);
@@ -584,10 +611,67 @@
         </div>
         <div class="sched-name">${esc(schedName(it))}</div>
         ${it.title && !rest ? `<div class="sched-title"><span class="stt" data-tt="${esc(it.title)}">${esc(it.title)}</span></div>` : ''}`;
+      card.addEventListener('click', () => openSchedDetail(it));
       strip.appendChild(card);
       applyMarquee(card.querySelector('.sched-title'));
     });
     translateTitles();
+  }
+
+  // 뱅온 카드 클릭 → 상세(멤버·시각·상태, 방송 중이면 라이브 제목/카테고리/시청자) 표시
+  function openSchedDetail(it) {
+    const m = scheduleMember(it);
+    const rest = isRest(it.title);
+    const live = !rest && !!(m && m.isLive);
+    const t = parseOpen(it.startDateTime) ?? Infinity;
+    const ended = !rest && !live && it.isFixedTime && t < Date.now();
+    const status = rest ? T('sched.rest') : live ? T('sched.started') : ended ? T('sched.ended') : T('sched.upcoming');
+
+    const modalInner = document.querySelector('.sched-modal');
+    if (m && m.accent) modalInner.style.setProperty('--card-accent', m.accent);
+
+    const ava = $('#sdAva');
+    ava.src = (m && m.avatar) || 'assets/logo_star.png';
+    wireImgFallback(ava, 'assets/logo_star.png');
+    $('#sdName').textContent = schedName(it);
+    const st = $('#sdStatus');
+    st.textContent = status;
+    st.className = 'sd-status ' + (live ? 'live' : ended ? 'ended' : rest ? '' : 'upcoming');
+
+    // 방송 중이면 라이브 썸네일 표시(캐시 무효화 포함). 없거나 로딩 실패하면 숨긴다.
+    const thumbEl = $('#sdThumb');
+    if (live && m && m.thumbnail) {
+      thumbEl.style.display = '';
+      thumbEl.hidden = false;
+      wireImgFallback(thumbEl, null); // 로딩 실패 시 숨김
+      thumbEl.src = bustThumb(m.thumbnail);
+    } else {
+      thumbEl.hidden = true;
+      thumbEl.removeAttribute('src');
+    }
+
+    const timeStr = rest ? T('sched.rest') : (it.isFixedTime ? timeLabel(it.startDateTime) : timeLabel(it.startDateTime) + '~');
+    const rowsHtml = [];
+    const row = (k, vHtml) => rowsHtml.push(`<div class="sd-row"><span class="sd-k">${esc(k)}</span><span class="sd-v">${vHtml}</span></div>`);
+    row(T('schedD.time'), esc(timeStr));
+    if (it.title && !rest) row(T('schedD.plan'), `<span data-tt="${esc(it.title)}">${esc(it.title)}</span>`);
+    if (live && m) {
+      if (m.title) row(T('schedD.liveTitle'), `<span data-tt="${esc(m.title)}">${esc(m.title)}</span>`);
+      if (m.category) row(T('schedD.category'), esc(m.category));
+      if (m.viewerCount != null) row(T('schedD.viewers'), esc(nfmt(m.viewerCount)));
+    }
+    $('#sdBody').innerHTML = rowsHtml.join('');
+
+    const acts = [];
+    if (live && m && m.liveUrl) acts.push(`<button class="mini-btn" data-url="${esc(m.liveUrl)}">${icon('play', 15)} ${esc(T('card.go'))}</button>`);
+    const chUrl = (m && (m.channelUrl || m.liveUrl)) || null;
+    if (chUrl) acts.push(`<button class="mini-btn ghost" data-url="${esc(chUrl)}">${esc(T('card.channel'))}</button>`);
+    const actEl = $('#sdActions');
+    actEl.innerHTML = acts.join('');
+    actEl.querySelectorAll('[data-url]').forEach((b) => b.addEventListener('click', () => { openLink(b.dataset.url); closeModalEl('#schedModal'); }));
+
+    openModalEl('#schedModal');
+    translateTitles(); // 제목/카테고리를 현재 언어로(캐시 있으면 즉시)
   }
 
   // 제목이 카드 폭보다 길면 양쪽 그라데이션 + 좌우 왕복(마퀴) 애니메이션
@@ -595,11 +679,17 @@
     if (!box) return;
     const text = box.querySelector('.stt');
     if (!text) return;
+    const FADE = 12; // 양끝 페이드(가림) 폭. CSS mask 의 페이드 폭과 맞춘다.
     const over = text.scrollWidth - box.clientWidth;
     if (over > 4) {
       box.classList.add('marquee');
-      box.style.setProperty('--shift', over + 'px');
-      box.style.setProperty('--dur', Math.max(2.5, over / 22).toFixed(1) + 's');
+      // 양끝 글자가 페이드에 가려지지 않도록 텍스트를 좌우로 FADE 만큼 들여쓰고, 그만큼 더 스크롤한다.
+      // → 시작 지점에선 첫 글자가 왼쪽 페이드 밖(안쪽)에, 끝 지점에선 마지막 글자가 오른쪽 페이드 밖에 놓인다.
+      text.style.paddingLeft = FADE + 'px';
+      text.style.paddingRight = FADE + 'px';
+      const shift = over + FADE * 2; // 패딩을 추가한 뒤의 실제 넘침폭(= 새 scrollWidth - clientWidth)
+      box.style.setProperty('--shift', shift + 'px');
+      box.style.setProperty('--dur', Math.max(2.5, shift / 22).toFixed(1) + 's');
     }
   }
 
@@ -611,6 +701,7 @@
     $('#setThumbs').checked = s.showThumbnails !== false;
     $('#setTray').checked = s.minimizeToTray !== false;
     $('#setStartup').checked = !!s.launchAtStartup;
+    $('#setBeta').checked = !!s.betaChannel;
     $('#setInterval').value = String(s.pollIntervalSec || 60);
     $('#setLanguage').value = I18N.normalize(s.language) || 'ko';
     buildMemberList('#subList', s.subscribed, saveSubscriptions);
@@ -701,14 +792,63 @@
 
     const save = async (patch) => (state.settings = await api.setSettings(patch));
     $('#setNotify').addEventListener('change', (e) => save({ notifyEnabled: e.target.checked }));
+    $('#btnTestNotify').addEventListener('click', async () => {
+      let res;
+      try { res = await api.testNotification(); } catch { res = null; }
+      if (res && res.ok === false && res.reason === 'unsupported') {
+        showToast({ icon: 'info', title: T('toast.notifyUnsupported'), duration: 4000 });
+      } else if (res && res.ok === false) {
+        // 전송은 시도했으나 OS 가 거부(예: 알림 권한 꺼짐) — 권한 확인을 안내한다.
+        showToast({ icon: 'alert', title: T('toast.notifyBlocked'), desc: T('toast.notifyBlockedDesc'), duration: 6000 });
+      } else {
+        showToast({ icon: 'checkmark', title: T('toast.notifyTestSent'), desc: T('toast.notifyTestSentDesc'), duration: 4000 });
+      }
+    });
     $('#setAutoOpen').addEventListener('change', (e) => { save({ autoOpenLive: e.target.checked }); updateAutoOpenEnabled(); });
     $('#setThumbs').addEventListener('change', (e) => { save({ showThumbnails: e.target.checked }); render(); });
     $('#setTray').addEventListener('change', (e) => save({ minimizeToTray: e.target.checked }));
     $('#setStartup').addEventListener('change', (e) => save({ launchAtStartup: e.target.checked }));
+    // 베타 채널 토글: 저장 후 곧바로 업데이트를 다시 확인해 새 채널 기준(정식/베타) 최신 버전을 안내한다.
+    $('#setBeta').addEventListener('change', async (e) => {
+      await save({ betaChannel: e.target.checked });
+      state.manualUpdateCheck = true;
+      api.checkUpdate();
+    });
     $('#setInterval').addEventListener('change', (e) => save({ pollIntervalSec: Number(e.target.value) }));
 
     $('#btnCheckUpdate').addEventListener('click', () => { state.manualUpdateCheck = true; api.checkUpdate(); });
+    $('#btnCopyDiag').addEventListener('click', copyDiagnostics);
     $('#btnUninstall').addEventListener('click', () => api.uninstall());
+  }
+
+  // 진단 정보(버그 신고용)를 사람이 읽기 좋은 형태로 만들어 화면에 보여주고 클립보드로 복사한다.
+  function friendlyOS(d) {
+    const p = d.platform === 'darwin' ? 'macOS' : d.platform === 'win32' ? 'Windows' : (d.platform || '');
+    return d.osVersion ? `${p} ${d.osVersion}` : p;
+  }
+  function friendlyArch(d) {
+    if (d.arch === 'arm64') return d.platform === 'darwin' ? 'Apple Silicon (arm64)' : 'ARM64 (arm64)';
+    if (d.arch === 'x64') return d.platform === 'darwin' ? 'Intel (x64)' : 'x64';
+    return d.arch || '';
+  }
+  async function copyDiagnostics() {
+    let d;
+    try { d = await api.getDiagnostics(); } catch { return; }
+    const channel = d.beta ? T('diag.channelBeta') : T('diag.channelStable');
+    const text = [
+      '### 앱 정보',
+      `- 앱 버전: v${d.version}`,
+      `- 채널: ${channel}`,
+      '',
+      '### 시스템 정보',
+      `- 운영체제: ${friendlyOS(d)}`,
+      `- 아키텍처: ${friendlyArch(d)}`,
+      `- Electron: ${d.electron} · Chrome: ${d.chrome} · Node: ${d.node}`,
+    ].join('\n');
+    const box = $('#diagBox');
+    if (box) { box.textContent = text; box.classList.add('show'); }
+    try { await api.copyToClipboard(text); } catch { /* 복사 실패해도 위 상자에서 직접 복사 가능 */ }
+    showToast({ icon: 'checkmark', title: T('diag.copied'), duration: 2200 });
   }
 
   // ── 업데이트 모달 ────────────────────────────
@@ -937,6 +1077,7 @@
       el.innerHTML = `
         <div class="cl-ver-row">
           <span class="cl-ver">v${esc(r.version)}</span>
+          ${r.beta ? `<span class="cl-beta">${esc(T('changelog.beta'))}</span>` : ''}
           ${isCur ? `<span class="cl-now">${esc(T('changelog.now'))}</span>` : ''}
           <span class="cl-date">${esc(r.date || '')}</span>
         </div>
@@ -992,6 +1133,11 @@
     $('#btnTerms').addEventListener('click', () => openModalEl('#termsModal'));
     $('#closeTerms').addEventListener('click', () => closeModalEl('#termsModal'));
     $('#termsModal').addEventListener('click', (e) => { if (e.target.id === 'termsModal') closeModalEl('#termsModal'); });
+  }
+
+  function wireSchedDetail() {
+    $('#closeSched').addEventListener('click', () => closeModalEl('#schedModal'));
+    $('#schedModal').addEventListener('click', (e) => { if (e.target.id === 'schedModal') closeModalEl('#schedModal'); });
   }
 
   // ── 가로 스크롤(휠/드래그, 스크롤바 숨김) ──────
@@ -1050,6 +1196,7 @@
     setIcon('#closeContact', 'x', 14);
     setIcon('#closeChangelog', 'x', 14);
     setIcon('#closeTerms', 'x', 14);
+    setIcon('#closeSched', 'x', 14);
     // data-icon 속성이 있는 요소(설정 사이드바, 링크 등) 일괄 채우기
     document.querySelectorAll('[data-icon]').forEach((el) => (el.innerHTML = icon(el.dataset.icon, 16)));
   }
@@ -1071,12 +1218,14 @@
     wireContact();
     wireChangelog();
     wireTerms();
+    wireSchedDetail();
 
     state.settings = await api.getSettings();
     // 저장된 언어로 정적 텍스트 번역 적용(첫 렌더 전에)
     I18N.setLang(state.settings.language || 'ko');
     I18N.apply(document);
     state.members = (await api.getMembers()) || [];
+    state.thumbStamp = Date.now();
     render();
     loadSchedule(); // 뱅온은 시작 시 1회 + 이후 1시간마다 재조회
     setInterval(loadSchedule, 60 * 60 * 1000);
@@ -1099,6 +1248,7 @@
     api.onMembers((members) => {
       try {
         state.members = members || [];
+        state.thumbStamp = Date.now();
         $('#btnRefresh').querySelector('svg')?.classList.remove('spin');
         render();
         renderSchedule(); // 라이브 상태 변화 반영(내부에서 변화 있을 때만 다시 그림)

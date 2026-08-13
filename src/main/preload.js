@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('stella', {
   // 설정
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
+  testNotification: () => ipcRenderer.invoke('notify:test'),
 
   // 방송 제목 번역(en/ja). { [원문]: 번역문 } 반환.
   translate: (texts, target) => ipcRenderer.invoke('i18n:translate', { texts, target }),
@@ -35,6 +36,8 @@ contextBridge.exposeInMainWorld('stella', {
   // 업데이트
   getVersion: () => ipcRenderer.invoke('app:version'),
   getChangelog: () => ipcRenderer.invoke('app:changelog'),
+  getDiagnostics: () => ipcRenderer.invoke('app:diagnostics'),
+  copyToClipboard: (text) => ipcRenderer.invoke('clipboard:write', text),
   uninstall: () => ipcRenderer.invoke('app:uninstall'),
   checkUpdate: () => ipcRenderer.invoke('update:check'),
   installUpdate: () => ipcRenderer.invoke('update:install'),

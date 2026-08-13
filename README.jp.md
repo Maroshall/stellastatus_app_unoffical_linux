@@ -9,6 +9,8 @@
 配信状態はCHZZK、配信スケジュール（バンオン）はStelLightのデータを使用しており、
 [`stellastatus`](https://www.npmjs.com/package/stellastatus) ライブラリとElectronで作られています。
 
+> 📌 正式版とベータ版の違い、ベータ版の受け取り方は **[バージョン案内](VERSIONING.md)**（韓国語）を参照してください。
+
 ## 機能
 
 - 全メンバーのCHZZK配信状態を定期的にチェック
@@ -88,15 +90,6 @@ git push origin v1.0.0
   ブロックが発生する可能性があり、個人・非商用での利用を前提としています。
 - 配信スケジュール: ファン制作サービスStelLightの公開APIを使用しています。サーバー負荷を抑えるため、
   チェック間隔は最短30秒に制限されています。
-
-## コード署名ポリシー (Code signing policy)
-
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-
-- 配布用インストーラー（`스텔라상태 Setup.exe`）は、SignPath.ioの無料コード署名とSignPath Foundationの証明書で署名されています。
-- **チーム体制**: 本プロジェクトは1人のメンテナー（[tabiluv](https://github.com/tabiluv)）が運営しており、
-  コミットの作成者（Author）、レビュアー（Reviewer）、承認者（Approver）の役割はすべて本人が担当しています。
-- 署名対象のアーティファクトは、GitHub Actionsのタグ（`v*`）ビルドで生成され、リリースとして配布されます。
 
 ## プライバシーポリシー (Privacy policy)
 

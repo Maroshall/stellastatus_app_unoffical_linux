@@ -43,6 +43,8 @@ const store = new Store({
     launchAtStartup: false,
     // 시작 시 창을 숨긴 채(트레이) 실행
     startHidden: false,
+    // 베타(Pre-release) 버전 받기. 켜면 정식+베타 중 가장 높은 버전을 우선 설치한다.
+    betaChannel: false,
     // 카드 썸네일 표시
     showThumbnails: true,
     // 상단에 고정(즐겨찾기)한 멤버 채널 key 목록. 목록 맨 위로 정렬된다.

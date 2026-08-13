@@ -6,6 +6,12 @@ const path = require('path');
 const os = require('os');
 const { app, shell } = require('electron');
 const { spawn } = require('child_process');
+const store = require('./store');
+
+// 사용자가 '베타 버전 받기'를 켰는지. 켜져 있으면 Pre-release 를 포함해 가장 높은 버전을 받는다.
+function wantsBeta() {
+  try { return !!store.get('betaChannel'); } catch { return false; }
+}
 
 let OWNER = '';
 let REPO = '';
@@ -38,10 +44,18 @@ function ghGet(url) {
   });
 }
 
+// 버전 비교. 정식은 3자리(x.y.z), 베타는 4자리(x.y.z.n)까지 온다.
+// 자리 수가 다르면 없는 자리는 0 으로 채워 비교하므로 v1.0.5.1 > v1.0.5, v1.0.6 > v1.0.5.9 가 성립한다.
 function cmpVersion(a, b) {
   const pa = String(a).replace(/^v/, '').split('.').map(Number);
   const pb = String(b).replace(/^v/, '').split('.').map(Number);
-  for (let i = 0; i < 3; i++) { if ((pa[i] || 0) > (pb[i] || 0)) return 1; if ((pa[i] || 0) < (pb[i] || 0)) return -1; }
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const x = pa[i] || 0;
+    const y = pb[i] || 0;
+    if (x > y) return 1;
+    if (x < y) return -1;
+  }
   return 0;
 }
 
@@ -101,6 +115,24 @@ function isMandatory(body) {
   return /<!--\s*force-?update\s*-->/i.test(body || '');
 }
 
+// 설치 대상 릴리스를 고른다.
+//  - 베타 끔: GitHub 의 'latest'(Pre-release 제외)를 그대로 쓴다.
+//  - 베타 켬: 릴리스 목록을 받아 draft 를 뺀 뒤(Pre-release 포함) 버전이 가장 높은 것을 고른다.
+async function fetchTargetRelease(beta) {
+  if (!beta) {
+    return ghGet(`https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`);
+  }
+  const list = await ghGet(`https://api.github.com/repos/${OWNER}/${REPO}/releases?per_page=30`);
+  if (!Array.isArray(list)) return null;
+  const candidates = list.filter((r) => !r.draft);
+  if (!candidates.length) return null;
+  return candidates.reduce((best, r) => {
+    const bv = best.tag_name || best.name || '0';
+    const rv = r.tag_name || r.name || '0';
+    return cmpVersion(rv, bv) > 0 ? r : best;
+  });
+}
+
 // 최신 릴리스 확인 → 새 버전이면 알림. 필수는 즉시 자동 다운로드, 일반은 [설치하기] 시 다운로드.
 async function check({ manual = false } = {}) {
   if (!OWNER || OWNER === 'YOUR_GITHUB_USERNAME' || !REPO) {
@@ -109,7 +141,9 @@ async function check({ manual = false } = {}) {
   }
   try {
     emit({ state: 'checking' });
-    const rel = await ghGet(`https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`);
+    const beta = wantsBeta();
+    const rel = await fetchTargetRelease(beta);
+    if (!rel) { emit({ state: 'none' }); return; }
     const latest = rel.tag_name || rel.name || '0.0.0';
     if (cmpVersion(latest, app.getVersion()) <= 0) { emit({ state: 'none' }); return; }
 
@@ -127,6 +161,7 @@ async function check({ manual = false } = {}) {
     const info = {
       version: String(latest).replace(/^v/, ''),
       mandatory: isMandatory(rel.body),
+      beta: !!rel.prerelease, // Pre-release 여부(베타 뱃지 표시용)
       notes: (rel.body || '').replace(/<!--(?!\s*i18n:)[\s\S]*?-->/g, '').trim(),
       repo: `${OWNER}/${REPO}`,
       htmlUrl: rel.html_url || `https://github.com/${OWNER}/${REPO}/releases/latest`,
@@ -215,12 +250,15 @@ function runInstaller() {
 async function getReleases() {
   if (!OWNER || OWNER === 'YOUR_GITHUB_USERNAME' || !REPO) return [];
   try {
+    const beta = wantsBeta();
     const list = await ghGet(`https://api.github.com/repos/${OWNER}/${REPO}/releases?per_page=20`);
     if (!Array.isArray(list)) return [];
     return list
-      .filter((r) => !r.draft)
+      // draft 는 항상 제외. Pre-release(베타)는 '베타 버전 받기'가 켜져 있을 때만 표시.
+      .filter((r) => !r.draft && (beta || !r.prerelease))
       .map((r) => ({
         version: String(r.tag_name || r.name || '').replace(/^v/, ''),
+        beta: !!r.prerelease,
         notes: (r.body || '').replace(/<!--(?!\s*i18n:)[\s\S]*?-->/g, '').trim(),
         date: (r.published_at || r.created_at || '').slice(0, 10),
         htmlUrl: r.html_url,

@@ -6,6 +6,24 @@ const https = require('node:https');
 
 const cache = new Map(); // `${target}:${text}` -> 번역문
 
+// 방송 은어 용어집 — 구글 번역이 엉뚱하게 음역하는 표현을 고정 번역으로 바꾼다.
+//  예) '저챗'(저스트 채팅)을 구글은 'Jeochat' 으로 음역한다 → 'Talk' 로 고정.
+// 긴 표현부터 먼저 치환되도록 길이 내림차순으로 정렬해 사용한다.
+const GLOSSARY = {
+  '저챗': { en: 'Talk', ja: 'トーク' },
+};
+const GLOSSARY_KEYS = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length);
+
+// 원문에서 용어집 표현을 대상 언어 고정어로 미리 치환한다.
+// (치환된 토큰은 이미 영어/가타카나라 구글 번역이 그대로 두는 경향이 있어, 긴 제목 속 '저챗'도 처리된다.)
+function applyGlossary(text, target) {
+  let out = text;
+  for (const ko of GLOSSARY_KEYS) {
+    if (out.includes(ko)) out = out.split(ko).join(GLOSSARY[ko][target] || ko);
+  }
+  return out;
+}
+
 function fetchTranslation(text, target) {
   return new Promise((resolve) => {
     const url =
@@ -31,7 +49,10 @@ function fetchTranslation(text, target) {
 async function translateOne(text, target) {
   const key = target + ':' + text;
   if (cache.has(key)) return cache.get(key);
-  const tr = await fetchTranslation(text, target);
+  // 용어집을 먼저 적용한 뒤, 아직 한글이 남아 있으면 번역 API 로 넘긴다.
+  // ('저챗' 단독처럼 치환 후 한글이 없으면 API 호출 없이 고정어를 그대로 사용)
+  const pre = applyGlossary(text, target);
+  const tr = /[가-힣]/.test(pre) ? await fetchTranslation(pre, target) : pre;
   cache.set(key, tr);
   return tr;
 }

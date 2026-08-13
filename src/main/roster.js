@@ -7,6 +7,7 @@ const PROFILES = {
   'ayatsuno-yuni': {
     nameEng: 'Ayatsuno Yuni',
     nameJa: '純角ユニ',
+    nameJaKana: 'あやつのゆに', // 히라가나 독음(검색용)
     accent: '#6D78E2',
     accent2: '#6D78E2',
     channelUrl: 'https://chzzk.naver.com/45e71a76e949e16a34764deb962f9d9f',
@@ -15,6 +16,7 @@ const PROFILES = {
   'sakihane-huya': {
     nameEng: 'Sakihane Huya',
     nameJa: '咲羽風夜',
+    nameJaKana: 'さきはねふや',
     logoKey: 'sakihane-huya', // 로고 파일명(assets/logos/sakihane-huya.png)
     accent: '#59467C',
     accent2: '#59467C',
@@ -26,6 +28,7 @@ const PROFILES = {
   'shirayuki-hina': {
     nameEng: 'Shirayuki Hina',
     nameJa: '白雪ひな',
+    nameJaKana: 'しらゆきひな',
     accent: '#EEDDC2',
     accent2: '#EEDDC2',
     channelUrl: 'https://chzzk.naver.com/b044e3a3b9259246bc92e863e7d3f3b8',
@@ -34,6 +37,7 @@ const PROFILES = {
   'neneko-mashiro': {
     nameEng: 'Neneko Mashiro',
     nameJa: 'ねねこましろ',
+    nameJaKana: 'ねねこましろ',
     accent: '#525054',
     accent2: '#525054',
     channelUrl: 'https://chzzk.naver.com/4515b179f86b67b4981e16190817c580',
@@ -42,6 +46,7 @@ const PROFILES = {
   'akane-lize': {
     nameEng: 'Akane Lize',
     nameJa: '朱音リゼ',
+    nameJaKana: 'あかねりぜ',
     accent: '#8C2830',
     accent2: '#8C2830',
     channelUrl: 'https://chzzk.naver.com/4325b1d5bbc321fad3042306646e2e50',
@@ -50,6 +55,7 @@ const PROFILES = {
   'arahashi-tabi': {
     nameEng: 'Arahashi Tabi',
     nameJa: '荒波子タビ',
+    nameJaKana: 'あらはしたび',
     accent: '#97C3E7',
     accent2: '#97C3E7',
     channelUrl: 'https://chzzk.naver.com/a6c4ddb09cdb160478996007bff35296',
@@ -60,6 +66,7 @@ const PROFILES = {
   'tenko-shibuki': {
     nameEng: 'Tenko Shibuki',
     nameJa: '天狐紫吹',
+    nameJaKana: 'てんこしぶき',
     accent: '#BDA4E4',
     accent2: '#BDA4E4',
     channelUrl: 'https://chzzk.naver.com/64d76089fba26b180d9c9e48a32600d9',
@@ -68,6 +75,7 @@ const PROFILES = {
   'aokumo-rin': {
     nameEng: 'Aokumo Rin',
     nameJa: '青雲凜',
+    nameJaKana: 'あおくもりん',
     accent: '#3B64BA',
     accent2: '#3B64BA',
     channelUrl: 'https://chzzk.naver.com/516937b5f85cbf2249ce31b0ad046b0f',
@@ -76,6 +84,7 @@ const PROFILES = {
   'hanako-nana': {
     nameEng: 'Hanako Nana',
     nameJa: '花子ナナ',
+    nameJaKana: 'はなこなな',
     accent: '#D17C85',
     accent2: '#D17C85',
     channelUrl: 'https://chzzk.naver.com/4d812b586ff63f8a2946e64fa860bbf5',
@@ -84,6 +93,7 @@ const PROFILES = {
   'yuzuha-riko': {
     nameEng: 'Yuzuha Riko',
     nameJa: '柚葉莉子',
+    nameJaKana: 'ゆずはりこ',
     accent: '#AECEA9',
     accent2: '#AECEA9',
     channelUrl: 'https://chzzk.naver.com/8fd39bb8de623317de90654718638b10',
@@ -100,6 +110,7 @@ const KEY_ALIAS = {
 const DEFAULT_PROFILE = {
   nameEng: '',
   nameJa: '',
+  nameJaKana: '',
   accent: '#8a7ffb',
   accent2: '#b6a6ff',
   channelUrl: null,

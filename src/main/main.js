@@ -11,6 +11,7 @@ const {
   shell,
   nativeImage,
   dialog,
+  clipboard,
 } = require('electron');
 const updater = require('./updater');
 const store = require('./store');
@@ -168,6 +169,23 @@ function maybeAutoOpen(member) {
   if (member.liveUrl) shell.openExternal(member.liveUrl);
 }
 
+// 알림 아이콘은 nativeImage 로 만들어 캐시한다.
+//  - 패키징(asar) 후 ICON_PATH 는 '...app.asar/build/icon.png' 처럼 asar 내부 경로가 된다.
+//    이 문자열 경로를 그대로 icon 에 넘기면 macOS 의 네이티브 이미지 로더가 asar 를 읽지 못해
+//    아이콘 로딩이 실패하고, 그 여파로 시스템 알림 자체가 표시되지 않는 경우가 있다.
+//    nativeImage.createFromPath 는 Electron 의 파일 접근을 쓰므로 asar 경로도 정상적으로 읽는다.
+//  - 이미지가 비어 있으면(경로 문제 등) 아예 아이콘을 넘기지 않는다(macOS 는 앱 아이콘으로 대체).
+let _notifyIcon;
+function notifyIcon() {
+  if (_notifyIcon === undefined) {
+    try {
+      const img = nativeImage.createFromPath(ICON_PATH);
+      _notifyIcon = img && !img.isEmpty() ? img : null;
+    } catch { _notifyIcon = null; }
+  }
+  return _notifyIcon || undefined;
+}
+
 function notifyLive(member) {
   if (!store.get('notifyEnabled')) return;
   if (!isSubscribed(member.key)) return;
@@ -176,10 +194,11 @@ function notifyLive(member) {
   const n = new Notification({
     title: i18n.t('notify.liveTitle', { name: i18n.memberName(member) }),
     body: member.title || i18n.t('notify.liveBody'),
-    icon: ICON_PATH,
+    icon: notifyIcon(),
     silent: false,
   });
   n.on('click', () => shell.openExternal(member.liveUrl));
+  n.on('failed', (_e, err) => console.error('알림 표시 실패(live):', err));
   n.show();
 }
 
@@ -191,10 +210,11 @@ function notifyUpdate(info) {
   const n = new Notification({
     title: i18n.t('notify.updTitle', { v: info.version }),
     body: info.mandatory ? i18n.t('notify.updBodyReq') : i18n.t('notify.updBody'),
-    icon: ICON_PATH,
+    icon: notifyIcon(),
     silent: false,
   });
   n.on('click', () => showWindow());
+  n.on('failed', (_e, err) => console.error('알림 표시 실패(update):', err));
   n.show();
 }
 
@@ -244,6 +264,34 @@ function registerIpc() {
     return store.store;
   });
 
+  // 알림 테스트 — [테스트] 버튼용. 구독/알림 설정과 무관하게 한 번 띄운다.
+  // 버튼을 눌렀는데도 알림이 안 보이면 앱이 아니라 OS(알림 권한/집중모드) 쪽 문제임을 알 수 있다.
+  ipcMain.handle('notify:test', () => {
+    if (!Notification.isSupported()) return { ok: false, reason: 'unsupported' };
+    // show() 직후 바로 반환하면 macOS 의 비동기 'failed'(예: 알림 권한 꺼짐 → UNErrorDomain 오류 1)를
+    // 놓쳐 UI 가 '보냈어요'로 오인한다. show/failed 이벤트를 잠깐 기다렸다가 실제 결과를 돌려준다.
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (r) => { if (!settled) { settled = true; resolve(r); } };
+      try {
+        const n = new Notification({
+          title: i18n.t('notify.testTitle'),
+          body: i18n.t('notify.testBody'),
+          icon: notifyIcon(),
+          silent: false,
+        });
+        n.on('click', () => showWindow());
+        n.on('show', () => finish({ ok: true }));
+        n.on('failed', (_e, err) => { console.error('알림 표시 실패(test):', err); finish({ ok: false, reason: String(err || 'failed') }); });
+        n.show();
+        // 일부 환경은 show/failed 를 발생시키지 않으므로, 1.5초 내 아무 이벤트도 없으면 성공으로 간주.
+        setTimeout(() => finish({ ok: true }), 1500);
+      } catch (e) {
+        finish({ ok: false, reason: String(e?.message || e) });
+      }
+    });
+  });
+
   // 방송 제목 번역(베스트 에포트). 렌더러가 en/ja 일 때만 호출한다.
   ipcMain.handle('i18n:translate', async (_e, payload) => {
     try { return await translateBatch(payload?.texts, payload?.target); }
@@ -286,6 +334,22 @@ function registerIpc() {
 
   ipcMain.handle('app:version', () => app.getVersion());
   ipcMain.handle('app:changelog', () => updater.getReleases());
+
+  // 진단 정보(버그 신고용). 사용자가 자기 시스템 정보를 몰라도 그대로 복사해 붙여넣을 수 있게 한다.
+  ipcMain.handle('app:diagnostics', () => ({
+    version: app.getVersion(),
+    beta: !!store.get('betaChannel'),
+    platform: process.platform,                 // 'darwin' | 'win32' | ...
+    arch: process.arch,                          // 'arm64' | 'x64' | ...
+    osVersion: (() => { try { return process.getSystemVersion(); } catch { return ''; } })(), // 예: macOS '26.6.1'
+    electron: process.versions.electron,
+    chrome: process.versions.chrome,
+    node: process.versions.node,
+  }));
+
+  // 클립보드 복사(렌더러가 만든 문자열을 그대로 복사). file:// 환경에서 navigator.clipboard 가
+  // 막히는 경우가 있어, 안전하게 메인 프로세스의 Electron clipboard 로 복사한다.
+  ipcMain.handle('clipboard:write', (_e, text) => { clipboard.writeText(String(text ?? '')); return true; });
 
   // 앱 제거 — 설치 폴더의 제거 프로그램 실행
   ipcMain.handle('app:uninstall', async () => {

@@ -74,6 +74,7 @@ class Poller extends EventEmitter {
       name: meta.name,
       nameEng: p.nameEng,
       nameJa: p.nameJa,
+      nameJaKana: p.nameJaKana,
       logo: p.logoKey || meta.key, // 로고 파일명(assets/logos/<logo>.png)
       gen: meta.gen,
       genName: meta.genName,

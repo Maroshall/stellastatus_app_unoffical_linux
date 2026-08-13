@@ -9,6 +9,8 @@
 방송 상태는 치지직, 방송 스케줄(뱅온)은 StelLight 데이터를 사용하며,
 [`stellastatus`](https://www.npmjs.com/package/stellastatus) 라이브러리와 Electron으로 만들어졌습니다.
 
+> 📌 정식·베타 버전의 차이와 베타 버전 받는 방법은 **[버전 안내](VERSIONING.md)** 를 참고하세요.
+
 ## 기능
 
 - 전 멤버의 치지직 방송 상태를 주기적으로 확인
@@ -87,15 +89,6 @@ git push origin v1.0.0
   차단될 수 있으며, 개인·비상업 용도를 전제로 합니다.
 - 방송 스케줄: 팬 제작 서비스 StelLight의 공개 API를 사용합니다. 서버 부담을 줄이기 위해 확인 주기는
   최소 30초로 제한됩니다.
-
-## 코드 서명 정책 (Code signing policy)
-
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-
-- 배포용 인스톨러(`스텔라상태 Setup.exe`)는 SignPath.io의 무료 코드 서명과 SignPath Foundation의 인증서로 서명됩니다.
-- **팀 역할**: 본 프로젝트는 1인 메인테이너([tabiluv](https://github.com/tabiluv))가 운영하며,
-  커밋 작성자(Author), 검토자(Reviewer), 승인자(Approver) 역할을 모두 본인이 담당합니다.
-- 서명 대상 아티팩트는 GitHub Actions에서 태그(`v*`) 빌드로 생성되어 릴리스로 배포됩니다.
 
 ## 개인정보 처리방침 (Privacy policy)
 

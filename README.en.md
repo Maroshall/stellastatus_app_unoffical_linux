@@ -10,6 +10,8 @@ This app is not an official StelLive service. It is an unofficial, fan-operated 
 Live status comes from CHZZK, and broadcast schedules (뱅온) come from StelLight. Built with the
 [`stellastatus`](https://www.npmjs.com/package/stellastatus) library and Electron.
 
+> 📌 For the difference between stable and beta versions and how to opt into betas, see the **[version guide](VERSIONING.md)** (written in Korean).
+
 ## Features
 
 - Periodically checks the CHZZK live status of all members
@@ -67,16 +69,6 @@ git push origin v1.0.3
   intended for personal, non-commercial use.
 - Schedules: the public API of StelLight, a fan-made service. The check interval is limited to a
   minimum of 30 seconds to reduce server load.
-
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-
-- The distributed installer (`스텔라상태 Setup.exe`) is signed with SignPath.io free code signing and a
-  certificate by the SignPath Foundation.
-- **Team roles**: this project is run by a single maintainer ([tabiluv](https://github.com/tabiluv)),
-  who acts as the Author, Reviewer, and Approver.
-- Signed artifacts are produced by GitHub Actions on tag (`v*`) builds and published as releases.
 
 ## Privacy policy
 
