@@ -14,6 +14,7 @@
     ko: {
       'lang.name': '한국어',
       // 타이틀바
+      'brand.name': '스텔라<b>상태</b>',
       'tb.refresh': '새로고침', 'tb.settings': '설정',
       'tb.min': '최소화', 'tb.max': '최대화', 'tb.close': '닫기',
       // 히어로
@@ -111,6 +112,7 @@
 
     en: {
       'lang.name': 'English',
+      'brand.name': 'Stella<b>Status</b>',
       'tb.refresh': 'Refresh', 'tb.settings': 'Settings',
       'tb.min': 'Minimize', 'tb.max': 'Maximize', 'tb.close': 'Close',
       'hero.eyebrow': 'STELLA STATUS · StelLive stream notifier',
@@ -196,6 +198,7 @@
 
     ja: {
       'lang.name': '日本語',
+      'brand.name': 'Stella<b>Status</b>',
       'tb.refresh': '更新', 'tb.settings': '設定',
       'tb.min': '最小化', 'tb.max': '最大化', 'tb.close': '閉じる',
       'hero.eyebrow': 'STELLA STATUS · ステラライブ配信通知',

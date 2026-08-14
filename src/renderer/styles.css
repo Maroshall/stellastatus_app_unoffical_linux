@@ -419,6 +419,8 @@ select option { background: var(--panel-2); color: var(--text); }
 .um-notes code, .cl-notes code { background: rgba(255,255,255,.08); border-radius: 4px; padding: 1px 5px; font-size: 11.5px; font-family: Consolas, monospace; }
 .um-notes strong, .cl-notes strong { color: var(--text); font-weight: 700; }
 .um-notes a.md-link, .cl-notes a.md-link { color: var(--accent-ink); cursor: pointer; text-decoration: none; }
+.um-notes blockquote, .cl-notes blockquote { margin: 0 0 8px; padding: 7px 12px; border-left: 3px solid var(--accent); background: rgba(255,255,255,.04); border-radius: 0 8px 8px 0; color: var(--text-dim); }
+.um-notes blockquote:last-child, .cl-notes blockquote:last-child { margin-bottom: 0; }
 .um-notes a.md-link:hover, .cl-notes a.md-link:hover { text-decoration: underline; }
 .um-notes hr, .cl-notes hr { border: none; border-top: 1px solid var(--panel-brd); margin: 10px 0; }
 .cl-empty, .cl-error { color: var(--text-mute); font-size: 13px; padding: 24px 4px; text-align: center; }
@@ -429,6 +431,8 @@ select option { background: var(--panel-2); color: var(--text); }
 .terms-view p { font-size: 12.5px; color: var(--text-dim); line-height: 1.65; margin-bottom: 12px; }
 .terms-view b { color: var(--text); font-weight: 600; }
 .cl-spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(255,255,255,.16); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+/* 제목/카테고리 번역 로딩 스피너(번역이 아직 안 온 동안 표시) */
+.tt-spin { display: inline-block; width: 12px; height: 12px; vertical-align: -1px; border-radius: 50%; border: 2px solid rgba(255,255,255,.22); border-top-color: var(--card-accent, var(--accent)); animation: spin .7s linear infinite; }
 
 .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
 .switch input { display: none; }

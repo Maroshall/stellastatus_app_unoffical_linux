@@ -26,23 +26,62 @@
 
   // 방송 제목 번역 — data-tt(원문)가 붙은 요소를 현재 언어로 번역해 표시한다.
   //  ko: 원문 그대로. en/ja: 메인 프로세스(번역 API)로 번역 후 적용. 캐시로 깜빡임 최소화.
+  //  번역이 아직 안 온 항목은 원문(한국어)을 그대로 두지 않고 로딩 스피너를 보여준다(번역 중임을 표시).
   const ttCache = { en: new Map(), ja: new Map() };
+  const ttPending = { en: new Set(), ja: new Set() }; // 번역 진행 중인 원문(중복 요청 방지)
   let _ttSeq = 0;
+  const TT_SPIN = '<span class="tt-spin" role="status" aria-label="translating"></span>';
+  // 번역 텍스트 적용(중복 DOM 쓰기 방지). ttState 로 현재 상태를 기억한다.
+  // 텍스트가 실제로 바뀌면, 마퀴가 걸린 스케줄 제목(.stt)은 새 텍스트 폭으로 마퀴를 다시 계산한다.
+  function ttSetText(e, text) {
+    if (e.dataset.ttState === 'text' && e.textContent === text) return;
+    e.dataset.ttState = 'text';
+    e.textContent = text;
+    if (e.classList.contains('stt')) { const box = e.closest('.sched-title'); if (box) applyMarquee(box); }
+  }
+  // 로딩 스피너 표시(이미 로딩 중이면 그대로 둠)
+  function ttSetLoading(e) {
+    if (e.dataset.ttState === 'loading') return;
+    e.dataset.ttState = 'loading';
+    e.innerHTML = TT_SPIN;
+  }
   async function translateTitles() {
     const target = I18N.lang;
     const cache = ttCache[target];
-    if (!cache) return; // ko → 번역 안 함(원문 유지)
     const els = [...document.querySelectorAll('[data-tt]')];
     if (!els.length) return;
-    els.forEach((e) => { const c = cache.get(e.dataset.tt); if (c) e.textContent = c; }); // 캐시 즉시 적용
-    const need = [...new Set(els.map((e) => e.dataset.tt).filter((t) => t && !cache.has(t)))];
-    if (!need.length) return;
+    // ko(또는 미지원 언어): 항상 원문 그대로, 로딩 표시 없음.
+    if (!cache) { els.forEach((e) => ttSetText(e, e.dataset.tt)); return; }
+    // 캐시된 건 즉시 번역 적용, 아직 없는 건 로딩 스피너 표시.
+    const need = [];
+    els.forEach((e) => {
+      const c = cache.get(e.dataset.tt);
+      if (c != null) ttSetText(e, c);
+      else { ttSetLoading(e); need.push(e.dataset.tt); }
+    });
+    // 이미 요청 중인 항목은 제외한다(중복 네트워크 요청 방지). 진행 중 요청이 끝나면
+    // 문서 전체를 다시 훑어 이 요소들도 함께 갱신되므로, 지금 새로 요청하지 않아도 된다.
+    const pending = ttPending[target];
+    const uniq = [...new Set(need)].filter((k) => !pending.has(k));
+    if (!uniq.length) return;
+    uniq.forEach((k) => pending.add(k));
     const seq = ++_ttSeq;
     let map = {};
-    try { map = await api.translate(need, target); } catch { return; }
+    try {
+      map = await api.translate(uniq, target);
+    } catch {
+      // 실패: 스피너가 멈춘 채 남지 않도록 로딩 중이던 항목을 원문으로 되돌린다.
+      if (I18N.lang === target) document.querySelectorAll('[data-tt]').forEach((e) => { if (!cache.has(e.dataset.tt)) ttSetText(e, e.dataset.tt); });
+      return;
+    } finally {
+      uniq.forEach((k) => pending.delete(k));
+    }
     Object.entries(map).forEach(([k, v]) => v && cache.set(k, v));
     if (seq !== _ttSeq || I18N.lang !== target) return; // 그 사이 언어/화면 바뀌면 폐기
-    document.querySelectorAll('[data-tt]').forEach((e) => { const c = cache.get(e.dataset.tt); if (c) e.textContent = c; });
+    document.querySelectorAll('[data-tt]').forEach((e) => {
+      const c = cache.get(e.dataset.tt);
+      ttSetText(e, c != null ? c : e.dataset.tt); // 번역 결과에 없으면 원문 유지(스피너 제거)
+    });
   }
 
   // ── 아이콘 팩(Lucide, MIT) ───────────────────
@@ -127,7 +166,9 @@
     const lines = String(src || '').replace(/\r\n/g, '\n').split('\n');
     const out = [];
     let list = null;
+    let quote = false; // 인용구(>) 진행 중 여부
     const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };
+    const closeQuote = () => { if (quote) { out.push('</blockquote>'); quote = false; } };
     const inline = (t) => {
       t = esc(t);
       t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -137,8 +178,16 @@
     };
     for (const raw of lines) {
       const line = raw.trimEnd();
-      if (!line.trim()) { closeList(); continue; }
+      if (!line.trim()) { closeList(); closeQuote(); continue; }
       let m;
+      // 인용구(>): 연속된 > 줄은 하나의 blockquote 로 묶고, 줄바꿈은 <br> 로 이어붙인다.
+      if ((m = /^>\s?(.*)/.exec(line))) {
+        closeList();
+        if (!quote) { out.push('<blockquote>'); quote = true; } else { out.push('<br>'); }
+        out.push(inline(m[1]));
+        continue;
+      }
+      closeQuote(); // 인용구가 아닌 줄을 만나면 blockquote 를 닫는다
       if ((m = /^###\s+(.*)/.exec(line))) { closeList(); out.push(`<h4>${inline(m[1])}</h4>`); continue; }
       if ((m = /^##\s+(.*)/.exec(line))) { closeList(); out.push(`<h3>${inline(m[1])}</h3>`); continue; }
       if ((m = /^#\s+(.*)/.exec(line))) { closeList(); out.push(`<h2>${inline(m[1])}</h2>`); continue; }
@@ -149,6 +198,7 @@
       out.push(`<p>${inline(line)}</p>`);
     }
     closeList();
+    closeQuote();
     return out.join('');
   }
 
@@ -630,9 +680,11 @@
     const modalInner = document.querySelector('.sched-modal');
     if (m && m.accent) modalInner.style.setProperty('--card-accent', m.accent);
 
+    // 모달은 한 번만 만들어지는 고정 요소라, addEventListener 대신 onerror 프로퍼티로 폴백을 건다.
+    // (열 때마다 리스너가 쌓이는 것을 방지 — 매번 새 핸들러가 이전 것을 덮어쓴다)
     const ava = $('#sdAva');
+    ava.onerror = () => { ava.onerror = null; ava.src = 'assets/logo_star.png'; };
     ava.src = (m && m.avatar) || 'assets/logo_star.png';
-    wireImgFallback(ava, 'assets/logo_star.png');
     $('#sdName').textContent = schedName(it);
     const st = $('#sdStatus');
     st.textContent = status;
@@ -641,11 +693,11 @@
     // 방송 중이면 라이브 썸네일 표시(캐시 무효화 포함). 없거나 로딩 실패하면 숨긴다.
     const thumbEl = $('#sdThumb');
     if (live && m && m.thumbnail) {
-      thumbEl.style.display = '';
+      thumbEl.onerror = () => { thumbEl.onerror = null; thumbEl.hidden = true; };
       thumbEl.hidden = false;
-      wireImgFallback(thumbEl, null); // 로딩 실패 시 숨김
       thumbEl.src = bustThumb(m.thumbnail);
     } else {
+      thumbEl.onerror = null;
       thumbEl.hidden = true;
       thumbEl.removeAttribute('src');
     }
@@ -675,11 +727,18 @@
   }
 
   // 제목이 카드 폭보다 길면 양쪽 그라데이션 + 좌우 왕복(마퀴) 애니메이션
+  // 번역으로 텍스트가 바뀐 뒤 다시 호출될 수 있으므로, 매번 이전 상태를 초기화하고 새로 측정한다(멱등).
   function applyMarquee(box) {
     if (!box) return;
     const text = box.querySelector('.stt');
     if (!text) return;
     const FADE = 12; // 양끝 페이드(가림) 폭. CSS mask 의 페이드 폭과 맞춘다.
+    // 재측정 전 초기화 — 패딩이 누적되거나 옛 --shift 가 남지 않도록.
+    box.classList.remove('marquee');
+    text.style.paddingLeft = '';
+    text.style.paddingRight = '';
+    box.style.removeProperty('--shift');
+    box.style.removeProperty('--dur');
     const over = text.scrollWidth - box.clientWidth;
     if (over > 4) {
       box.classList.add('marquee');
