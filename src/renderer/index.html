@@ -211,8 +211,12 @@
 
           <div class="section-label" data-i18n="label.report">문제 신고</div>
           <div class="setting-row">
+            <div><div class="s-title" data-i18n="report.t">문제 신고 · 문의</div><div class="s-desc" data-i18n="report.d">버그 신고나 문의를 이메일 또는 GitHub 이슈로 보냅니다.</div></div>
+            <button class="mini-btn" id="btnReport" data-i18n="report.btn">신고하기</button>
+          </div>
+          <div class="setting-row">
             <div><div class="s-title" data-i18n="diag.t">시스템 정보 복사</div><div class="s-desc" data-i18n="diag.d">버그 신고 시 그대로 붙여넣을 수 있게 앱·시스템 정보를 복사합니다.</div></div>
-            <button class="mini-btn" id="btnCopyDiag" data-i18n="diag.btn">복사</button>
+            <button class="mini-btn ghost" id="btnCopyDiag" data-i18n="diag.btn">복사</button>
           </div>
           <pre class="diag-box" id="diagBox" aria-live="polite"></pre>
 
@@ -286,6 +290,21 @@
       <button class="icon-btn changelog-close" id="closeChangelog"></button>
       <div class="cl-head"><h2 data-i18n="changelog.title">업데이트 기록</h2></div>
       <div class="cl-list" id="clList"><div class="cl-empty" data-i18n="changelog.loading">불러오는 중…</div></div>
+    </div>
+  </div>
+
+  <!-- 이번 버전에서 바뀐 점(업데이트 후 첫 실행 시 1회) -->
+  <div class="modal-backdrop" id="whatsNewModal" hidden>
+    <div class="modal wn-modal">
+      <div class="wn-head">
+        <span class="wn-badge">🎉</span>
+        <div>
+          <div class="wn-title" data-i18n="whatsnew.title">이번 버전에서 바뀐 점</div>
+          <div class="wn-ver" id="wnVer"></div>
+        </div>
+      </div>
+      <div class="wn-notes cl-notes" id="wnNotes"></div>
+      <div class="wn-foot"><button class="mini-btn" id="wnOk" data-i18n="whatsnew.ok">확인</button></div>
     </div>
   </div>
 

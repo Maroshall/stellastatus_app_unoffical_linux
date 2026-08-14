@@ -185,8 +185,27 @@ body {
 .live-elapsed { position: absolute; bottom: 10px; left: 10px; display: flex; align-items: center; gap: 5px; background: rgba(0,0,0,.6); color: #fff; font-size: 11px; padding: 4px 9px; border-radius: 8px; }
 
 .card-body { flex: 0 0 auto; padding: 13px 14px 14px; }
-.member-head { display: flex; align-items: center; gap: 11px; }
+.member-head { display: flex; align-items: center; gap: 11px; position: relative; }
 .avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid var(--card-accent); background: var(--panel-2); }
+
+/* 프로필 아바타(소셜 팝아웃 트리거) */
+.ava-wrap { position: relative; flex-shrink: 0; display: inline-flex; border-radius: 50%; }
+.member-head.has-social .ava-wrap { cursor: pointer; }
+.ava-more { position: absolute; right: -2px; bottom: -2px; width: 16px; height: 16px; border-radius: 50%; background: var(--card-accent); color: var(--card-ink, #1c1720); display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.member-head.has-social .ava-more { display: flex; }
+.member-head.has-social:hover .ava-more { opacity: .9; }
+.member-head.social-open .ava-more { opacity: 0; }
+
+/* 이름 영역: 팝아웃 열리면 블러 처리 */
+.m-names { min-width: 0; flex: 1; transition: filter .2s, opacity .2s; }
+.member-head.social-open .m-names { filter: blur(4px); opacity: .3; pointer-events: none; }
+
+/* 소셜 아이콘: 아바타 오른쪽에서 튀어나오듯 슬라이드 */
+.social-icons { position: absolute; left: 52px; top: 50%; display: flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transform: translate(-10px, -50%); transition: opacity .2s, transform .2s; }
+.member-head.social-open .social-icons { opacity: 1; pointer-events: auto; transform: translate(0, -50%); }
+.social-ico { -webkit-app-region: no-drag; width: 32px; height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--panel-brd); background: rgba(255,255,255,.06); color: var(--text-dim); cursor: pointer; transition: transform .18s, background .15s, color .15s; transition-delay: calc(var(--i, 0) * 40ms); }
+.member-head.social-open .social-ico { transform: translateX(0); }
+.social-ico:hover { background: var(--card-accent); color: var(--card-ink, #1c1720); transform: translateY(-2px); }
 .avatar.star-mark { padding: 9px; }
 .m-names { min-width: 0; flex: 1; }
 .m-name { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
@@ -244,6 +263,18 @@ body {
 .sched-card:hover .sched-title.marquee .stt { animation-play-state: running; }
 @keyframes sched-marquee { from { transform: translateX(0); } to { transform: translateX(calc(-1 * var(--shift, 0px))); } }
 .sched-card { cursor: pointer; }
+.sched-card.noinfo { opacity: .5; }
+.sched-time.noinfo { color: var(--text-mute); font-weight: 600; }
+.sd-status.noinfo { background: rgba(255,255,255,.06); color: var(--text-mute); }
+
+/* 이번 버전에서 바뀐 점 모달 */
+.wn-modal { width: min(460px, calc(100vw - 48px)); padding: 22px; }
+.wn-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.wn-badge { font-size: 26px; line-height: 1; }
+.wn-title { font-size: 16px; font-weight: 700; }
+.wn-ver { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
+.wn-notes { max-height: 46vh; overflow-y: auto; margin-top: 0; }
+.wn-foot { display: flex; justify-content: flex-end; margin-top: 18px; }
 
 /* 뱅온 상세 모달 */
 .sched-modal { width: min(420px, calc(100vw - 48px)); padding: 22px; position: relative; --card-accent: var(--accent); }

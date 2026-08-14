@@ -51,6 +51,8 @@ const store = new Store({
     pinned: [],
     // 마지막 창 크기/위치
     windowBounds: { width: 1180, height: 780 },
+    // '이번 버전에서 바뀐 점'을 마지막으로 보여준 버전. 업데이트 후 첫 실행 때 딱 1번만 안내하는 데 쓴다.
+    lastShownVersion: null,
   },
 });
 

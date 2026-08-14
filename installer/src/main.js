@@ -25,6 +25,8 @@ const isUpdate = process.argv.includes('--update');
 const isDev = process.argv.includes('--dev');
 const dirIdx = process.argv.indexOf('--dir');
 const targetDirArg = dirIdx >= 0 ? process.argv[dirIdx + 1] : null;
+const langIdx = process.argv.indexOf('--lang'); // 앱이 업데이트/제거 시 전달하는 언어
+const langArg = langIdx >= 0 ? process.argv[langIdx + 1] : null;
 let win = null;
 
 app.setAppUserModelId('com.stellastatus.installer');
@@ -60,6 +62,7 @@ else {
         version: app.getVersion(),
         defaultDir: core.defaultInstallDir(),
         targetDir: targetDirArg || core.defaultInstallDir(),
+        lang: langArg,
       });
     });
   });

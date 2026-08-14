@@ -139,9 +139,23 @@
     if (d) { state.dir = d.endsWith(state.appName) ? d : `${d}\\${state.appName}`; $('#pathInput').value = state.dir; }
   });
 
+  // 진행 상태 문구를 현재 언어로 만든다(코어는 phase 만 보내고 문구는 여기서 현지화).
+  // 알 수 없는 phase 는 코어가 보낸 text(폴백)를 그대로 쓴다.
+  function progStatusText(p) {
+    switch (p.phase) {
+      case 'prepare': return T('prog.preparing');
+      case 'copy': return T('prog.st.copy') + (p.total ? ` (${p.done || 0}/${p.total})` : '');
+      case 'register': return T('prog.st.register');
+      case 'remove': return T('prog.st.remove');
+      case 'cleanup': return T('prog.st.cleanup');
+      case 'done': return '';
+      default: return p.text || '';
+    }
+  }
+
   api.onProgress((p) => {
     $('#barFill').style.width = (p.percent || 0) + '%';
-    $('#progText').textContent = p.text || '';
+    $('#progText').textContent = progStatusText(p);
     if (state.mode === 'uninstall') $('#progTitle').textContent = T('prog.uninstalling');
     else if (state.mode === 'update') $('#progTitle').textContent = p.phase === 'done' ? T('prog.updated') : T('prog.updating');
     else $('#progTitle').textContent = p.phase === 'done' ? T('prog.installed') : T('prog.installing');
@@ -164,6 +178,8 @@
   }
 
   api.onBoot((b) => {
+    // 업데이트/제거 모드는 앱이 전달한 언어(--lang)로 맞춘다(설치 마법사 UI 를 앱 언어와 통일).
+    if (b.lang) setLanguage(b.lang);
     state.mode = b.mode;
     state.appName = b.appName || '스텔라상태';
     state.version = b.version || '';

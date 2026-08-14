@@ -8,9 +8,19 @@ const { app, shell } = require('electron');
 const { spawn } = require('child_process');
 const store = require('./store');
 
-// 사용자가 '베타 버전 받기'를 켰는지. 켜져 있으면 Pre-release 를 포함해 가장 높은 버전을 받는다.
+// 버전 문자열이 베타(4자리, 예: 1.0.5.1)인지. 정식은 3자리(1.0.5).
+function isBetaVersion(v) {
+  return String(v || '').replace(/^v/, '').split('.').filter((s) => s !== '').length >= 4;
+}
+
+// 베타 채널로 취급할지 여부.
+//  - 설정의 '베타 버전 받기'가 켜져 있으면 베타.
+//  - 또는 '현재 설치된 버전 자체가 베타'면 토글과 무관하게 베타로 취급한다.
+//    (베타를 설치한 사용자가 토글을 안 켰더라도 계속 베타 업데이트/기록을 받도록.
+//     이후 정식 버전으로 올라가면 자동으로 정식 채널로 돌아온다.)
 function wantsBeta() {
-  try { return !!store.get('betaChannel'); } catch { return false; }
+  try { if (store.get('betaChannel')) return true; } catch { /* ignore */ }
+  return isBetaVersion(currentVersion());
 }
 
 let OWNER = '';
@@ -244,7 +254,9 @@ function runInstaller() {
     return;
   }
   const installDir = path.dirname(process.execPath);
-  spawn(downloadedPath, ['--update', '--dir', installDir], { detached: true, stdio: 'ignore' }).unref();
+  // 앱 언어를 넘겨 설치 마법사(업데이트 모드)도 같은 언어로 표시되게 한다.
+  const lang = (() => { try { return store.get('language') || 'ko'; } catch { return 'ko'; } })();
+  spawn(downloadedPath, ['--update', '--dir', installDir, '--lang', lang], { detached: true, stdio: 'ignore' }).unref();
   // 예전엔 400ms 뒤 app.quit() 했지만, 그러면 인스톨러가 압축 해제/부팅되는 몇 초 동안
   // 화면이 비어 전환이 '느리게' 느껴졌다. 이제 앱 창을 그대로 둔 채 기다린다 →
   // 인스톨러가 준비되면 스스로 taskkill 로 이 앱을 종료시키므로, 인스톨러 창이 먼저

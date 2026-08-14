@@ -85,6 +85,13 @@ class Poller extends EventEmitter {
       emoji: p.emoji,
       channelUrl: p.channelUrl,
       cafe: p.cafe,
+      // 프로필 아이콘 팝아웃용 소셜 링크(있는 것만 표시). chzzk 는 채널 URL 에서 자동 채움.
+      social: {
+        chzzk: p.channelUrl || null,
+        youtube: p.youtube || null,
+        x: p.x || null,
+        instagram: p.instagram || null,
+      },
       avatar,
       isLive: Boolean(status.isLive),
       title: status.title || null,

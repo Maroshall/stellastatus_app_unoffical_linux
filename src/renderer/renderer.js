@@ -105,13 +105,19 @@
     clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
     sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
     star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.12 2.12 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.12 2.12 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.12 2.12 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.12 2.12 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.12 2.12 0 0 0 1.597-1.16z"/>',
+    // 소셜 브랜드 아이콘
+    youtube: '<path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>',
+    xlogo: '<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>',
+    instagram: '<rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>',
+    chzzk: '<circle cx="12" cy="12" r="10"/><polygon points="10 8.5 16 12 10 15.5"/>',
   };
-  const FILLED = new Set(['play']);
+  // fill 로 그리는 아이콘. youtube 는 재생 삼각형을 파낼 수 있게 evenodd 를 쓴다.
+  const FILLED = new Set(['play', 'youtube', 'xlogo']);
   function icon(name, size = 18) {
     const p = ICONS[name];
     if (!p) return '';
     const attrs = FILLED.has(name)
-      ? 'fill="currentColor" stroke="none"'
+      ? 'fill="currentColor" stroke="none" fill-rule="evenodd"'
       : 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
     return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" ${attrs}>${p}</svg>`;
   }
@@ -274,16 +280,29 @@
       : `<div class="m-title offline">${m.error ? T('card.offErr') : T('card.offIdle')}</div>
          <div class="m-category"></div>`;
 
+    // 소셜 링크(있는 것만) — 프로필을 누르면 이름이 블러되며 오른쪽으로 아이콘이 튀어나온다.
+    const SOCIALS = [
+      { k: 'chzzk', ic: 'chzzk', url: m.social && m.social.chzzk },
+      { k: 'youtube', ic: 'youtube', url: m.social && m.social.youtube },
+      { k: 'x', ic: 'xlogo', url: m.social && m.social.x },
+      { k: 'instagram', ic: 'instagram', url: m.social && m.social.instagram },
+    ].filter((s) => s.url);
+    const socialHtml = SOCIALS.length
+      ? `<div class="social-icons">${SOCIALS.map((s, i) =>
+          `<button class="social-ico s-${s.k}" data-url="${esc(s.url)}" style="--i:${i}" title="${s.k}" aria-label="${s.k}">${icon(s.ic, 15)}</button>`).join('')}</div>`
+      : '';
+
     const pinTip = esc(isPinned(m.key) ? T('card.unpin') : T('card.pin'));
     card.innerHTML = `
       <div class="thumb-wrap">${thumb}${badge}<button class="pin-btn${isPinned(m.key) ? ' on' : ''}" data-pin="${esc(m.key)}" title="${pinTip}" aria-label="${pinTip}">${icon('star', 15)}</button></div>
       <div class="card-body">
-        <div class="member-head">
-          ${avatar}
+        <div class="member-head${SOCIALS.length ? ' has-social' : ''}">
+          <div class="ava-wrap" role="button" tabindex="0" aria-label="${esc(T('card.social'))}">${avatar}<span class="ava-more">${icon('external', 12)}</span></div>
           <div class="m-names">
             <div class="m-name">${esc(I18N.memberName(m))} <span class="gen-chip">${esc(I18N.genName(m.gen, m.genName))}</span></div>
             <div class="m-eng">${esc(I18N.lang === 'ko' ? (m.nameEng || '') : (m.name || ''))}</div>
           </div>
+          ${socialHtml}
         </div>
         ${titleHtml}
         <div class="card-actions">
@@ -310,6 +329,17 @@
     });
     const pinBtn = card.querySelector('[data-pin]');
     if (pinBtn) pinBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePin(m.key); });
+
+    // 프로필(아바타) 클릭 → 이름 블러 + 소셜 아이콘 팝아웃 토글
+    if (SOCIALS.length) {
+      const head = card.querySelector('.member-head');
+      const avaWrap = card.querySelector('.ava-wrap');
+      const toggle = (e) => { e.stopPropagation(); head.classList.toggle('social-open'); };
+      if (avaWrap) {
+        avaWrap.addEventListener('click', toggle);
+        avaWrap.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(e); } });
+      }
+    }
     return card;
   }
 
@@ -602,93 +632,126 @@
     renderSchedule(true);
   }
 
-  // 뱅온 항목을 현재 시각 + 라이브 상태로 분류(재요청 없이 앱에서 계산)
+  // 뱅온을 '멤버별'로 묶어 분류한다. (한 멤버가 휴방+스페이스처럼 여러 개면 하나로 합치고,
+  //  일정이 없는 멤버는 '정보 없음'으로 표시한다.)
   function classifyScheduleRows() {
     const items = state.scheduleItems;
     if (!Array.isArray(items)) return null;
     const now = Date.now();
-    // 방송 중 → '시작됨'(맨 뒤+흐리게). 시간이 '확정된' 뱅온이 지났고 오프라인 → '종료'(맨 뒤+흐리게).
-    // 00:00~ 처럼 시간 미확정(isFixedTime=false)인 항목은 자정이 지나도 '종료'가 아니라 '예정'으로 둔다.
-    return items
-      .map((it) => {
-        const rest = isRest(it.title);
-        const t = parseOpen(it.startDateTime) ?? Infinity; // KST 기준 절대시간
-        const live = !rest && scheduleMemberLive(it);
-        const ended = !rest && !live && it.isFixedTime && t < now;
-        const upcoming = !rest && !live && !ended; // 아직 시작 전 = 예정
-        const mem = scheduleMember(it);
-        const order = mem && mem.order != null ? mem.order : 999; // 기수(로스터) 순서
-        const pinnedM = !!(mem && isPinned(mem.key));             // 즐겨찾기 멤버
-        return { it, t, rest, live, ended, upcoming, done: live || ended, order, pinnedM };
-      })
-      // 즐겨찾기 → 방송 중(시작됨) → 예정/휴방 → 종료, 같은 그룹 안에서는 기수(로스터) 순
-      .sort((a, b) => {
-        const rk = (r) => (r.live ? 0 : r.ended ? 2 : 1);
-        return (a.pinnedM ? 0 : 1) - (b.pinnedM ? 0 : 1) || rk(a) - rk(b) || a.order - b.order || a.t - b.t;
-      });
+
+    // 로스터의 모든 멤버를 먼저 등록(일정 없는 멤버도 '정보 없음'으로 나오게).
+    const groups = new Map(); // key -> { m, name, key, items }
+    state.members.forEach((m) => groups.set(m.key, { m, name: I18N.memberName(m), key: m.key, items: [] }));
+    items.forEach((it) => {
+      const m = scheduleMember(it);
+      if (m && groups.has(m.key)) { groups.get(m.key).items.push(it); return; }
+      // 로스터에 없는(졸업 등) 이름은 별도 그룹으로.
+      const k = 'x:' + (it.channelKey || it.stellarName || '');
+      if (!groups.has(k)) groups.set(k, { m: null, name: it.stellarName || '', key: k, items: [] });
+      groups.get(k).items.push(it);
+    });
+
+    const rows = [];
+    groups.forEach((g) => {
+      const its = g.items;
+      const live = !!(g.m && g.m.isLive);
+      const pinnedM = !!(g.m && isPinned(g.m.key));
+      const order = g.m && g.m.order != null ? g.m.order : 999;
+      if (!its.length) {
+        rows.push({ ...g, items: [], noinfo: true, rest: false, live, ended: false, upcoming: false, t: Infinity, titleLabel: '', primary: null, order, pinnedM });
+        return;
+      }
+      const allRest = its.every((it) => isRest(it.title));
+      // 남은 '예정' 이 하나도 없으면(모두 지난 확정 시각) 종료로 본다.
+      const hasFuture = its.some((it) => !isRest(it.title) && (!it.isFixedTime || (parseOpen(it.startDateTime) ?? Infinity) >= now));
+      const ended = !live && !allRest && !hasFuture;
+      const upcoming = !live && !allRest && !ended;
+      const times = its.map((it) => parseOpen(it.startDateTime)).filter((x) => x != null);
+      const t = times.length ? Math.min(...times) : Infinity;
+      // 표시 라벨: 휴방→현지화, 그 외→제목. 중복 제거 후 ' + ' 로 합침(예: '휴방 + 스페이스').
+      const labels = [...new Set(its.map((it) => (isRest(it.title) ? T('sched.rest') : (it.title || '').trim())).filter(Boolean))];
+      const titleLabel = labels.join(' + ');
+      // 시각/상세용 대표 항목: 시간 있는 비휴방 우선.
+      const primary = its.find((it) => !isRest(it.title) && parseOpen(it.startDateTime) != null) || its[0];
+      rows.push({ ...g, items: its, noinfo: false, rest: allRest, live, ended, upcoming, t, titleLabel, primary, order, pinnedM });
+    });
+
+    // 즐겨찾기 → 방송 중 → 예정/휴방 → 종료 → 정보 없음, 같은 그룹 안에서는 기수(로스터) 순
+    rows.sort((a, b) => {
+      const rk = (r) => (r.live ? 0 : r.noinfo ? 4 : r.ended ? 3 : r.rest ? 2 : 1);
+      return (a.pinnedM ? 0 : 1) - (b.pinnedM ? 0 : 1) || rk(a) - rk(b) || a.order - b.order || (a.t || 0) - (b.t || 0);
+    });
+    return rows;
   }
-  const scheduleSig = (rows) => rows.map((r) => `${r.it.stellarName}|${r.t}|${r.live ? 'L' : r.ended ? 'E' : '-'}|${r.pinnedM ? 'P' : ''}`).join(';');
+  const scheduleSig = (rows) => rows.map((r) => `${r.key}|${r.noinfo ? 'N' : r.titleLabel}|${r.t}|${r.live ? 'L' : r.ended ? 'E' : r.rest ? 'R' : '-'}|${r.pinnedM ? 'P' : ''}`).join(';');
 
   function renderSchedule(force = false) {
     const strip = $('#schedStrip');
     if (state.scheduleItems === 'error') { strip.innerHTML = `<div class="sched-error">${esc(T('sched.error'))}</div>`; return; }
-    const items = state.scheduleItems;
-    if (!Array.isArray(items)) return; // 아직 로드 전
-    if (!items.length) { strip.innerHTML = `<div class="sched-empty">${esc(T('sched.empty'))}</div>`; return; }
+    if (!Array.isArray(state.scheduleItems)) return; // 아직 로드 전
 
     const rows = classifyScheduleRows();
+    if (!rows || !rows.length) { strip.innerHTML = `<div class="sched-empty">${esc(T('sched.empty'))}</div>`; return; }
     const sig = scheduleSig(rows);
     // 분류(시작/종료/순서)가 실제로 바뀔 때만 다시 그린다(마퀴 애니메이션 리셋 방지).
     if (!force && sig === state._schedSig) return;
     state._schedSig = sig;
 
     strip.innerHTML = '';
-    rows.forEach(({ it, rest, live, ended, upcoming, done }) => {
+    rows.forEach((row) => {
+      const { items: its, name, noinfo, rest, live, ended, upcoming, titleLabel, primary } = row;
       const badge = live
         ? `<span class="sched-started live"><span class="ss-dot"></span>${esc(T('sched.started'))}</span>`
         : ended
           ? `<span class="sched-started ended">${esc(T('sched.ended'))}</span>`
-          : upcoming
+          : (!noinfo && upcoming)
             ? `<span class="sched-started upcoming">${esc(T('sched.upcoming'))}</span>`
             : '';
+      // 시각 칸: 정보없음 → '정보 없음', 휴방 → '휴방', 그 외 → 대표 항목 시각.
+      let timeHtml;
+      if (noinfo) timeHtml = `<span class="sched-time noinfo">${esc(T('sched.noinfo'))}</span>`;
+      else if (rest) timeHtml = `<span class="sched-time rest">${esc(T('sched.rest'))}</span>`;
+      else {
+        const it = primary;
+        const hasT = it && parseOpen(it.startDateTime) != null;
+        const tl = hasT ? (it.isFixedTime ? timeLabel(it.startDateTime) : timeLabel(it.startDateTime) + '~') : '';
+        timeHtml = `<span class="sched-time">${tl}</span>`;
+      }
+      // 제목 라인: 정보없음/휴방단독이면 생략, 그 외엔 합친 라벨. 단일 제목만 번역(data-tt).
+      const single = !rest && its && its.length === 1 ? its[0] : null;
+      const showTitle = !noinfo && titleLabel && !(rest && its.length === 1);
+      const ttAttr = single && single.title ? ` data-tt="${esc(single.title)}"` : '';
       const card = document.createElement('div');
-      // 종료만 흐리게(past), 방송 중은 강조(live)
-      card.className = 'sched-card' + (ended ? ' past' : '') + (live ? ' live' : '');
+      card.className = 'sched-card' + (ended ? ' past' : '') + (live ? ' live' : '') + (noinfo ? ' noinfo' : '');
       card.innerHTML = `
-        <div class="sched-time-row">
-          <span class="sched-time ${rest ? 'rest' : ''}">${rest ? esc(T('sched.rest')) : (it.isFixedTime ? timeLabel(it.startDateTime) : timeLabel(it.startDateTime) + '~')}</span>
-          ${badge}
-        </div>
-        <div class="sched-name">${esc(schedName(it))}</div>
-        ${it.title && !rest ? `<div class="sched-title"><span class="stt" data-tt="${esc(it.title)}">${esc(it.title)}</span></div>` : ''}`;
-      card.addEventListener('click', () => openSchedDetail(it));
+        <div class="sched-time-row">${timeHtml}${badge}</div>
+        <div class="sched-name">${esc(name)}</div>
+        ${showTitle ? `<div class="sched-title"><span class="stt"${ttAttr}>${esc(titleLabel)}</span></div>` : ''}`;
+      card.addEventListener('click', () => openSchedDetail(row));
       strip.appendChild(card);
       applyMarquee(card.querySelector('.sched-title'));
     });
     translateTitles();
   }
 
-  // 뱅온 카드 클릭 → 상세(멤버·시각·상태, 방송 중이면 라이브 제목/카테고리/시청자) 표시
-  function openSchedDetail(it) {
-    const m = scheduleMember(it);
-    const rest = isRest(it.title);
-    const live = !rest && !!(m && m.isLive);
-    const t = parseOpen(it.startDateTime) ?? Infinity;
-    const ended = !rest && !live && it.isFixedTime && t < Date.now();
-    const status = rest ? T('sched.rest') : live ? T('sched.started') : ended ? T('sched.ended') : T('sched.upcoming');
+  // 뱅온 카드 클릭 → 상세(멤버·상태 + 각 일정 시각/내용, 방송 중이면 라이브 제목/카테고리/시청자). 인자는 멤버 그룹 row.
+  function openSchedDetail(row) {
+    const m = row.m;
+    const its = row.items || [];
+    const { noinfo, rest, live, ended, upcoming } = row;
+    const status = noinfo ? T('sched.noinfo') : rest ? T('sched.rest') : live ? T('sched.started') : ended ? T('sched.ended') : T('sched.upcoming');
 
     const modalInner = document.querySelector('.sched-modal');
     if (m && m.accent) modalInner.style.setProperty('--card-accent', m.accent);
 
     // 모달은 한 번만 만들어지는 고정 요소라, addEventListener 대신 onerror 프로퍼티로 폴백을 건다.
-    // (열 때마다 리스너가 쌓이는 것을 방지 — 매번 새 핸들러가 이전 것을 덮어쓴다)
     const ava = $('#sdAva');
     ava.onerror = () => { ava.onerror = null; ava.src = 'assets/logo_star.png'; };
     ava.src = (m && m.avatar) || 'assets/logo_star.png';
-    $('#sdName').textContent = schedName(it);
+    $('#sdName').textContent = row.name || '';
     const st = $('#sdStatus');
     st.textContent = status;
-    st.className = 'sd-status ' + (live ? 'live' : ended ? 'ended' : rest ? '' : 'upcoming');
+    st.className = 'sd-status ' + (live ? 'live' : ended ? 'ended' : noinfo ? 'noinfo' : rest ? '' : 'upcoming');
 
     // 방송 중이면 라이브 썸네일 표시(캐시 무효화 포함). 없거나 로딩 실패하면 숨긴다.
     const thumbEl = $('#sdThumb');
@@ -702,15 +765,26 @@
       thumbEl.removeAttribute('src');
     }
 
-    const timeStr = rest ? T('sched.rest') : (it.isFixedTime ? timeLabel(it.startDateTime) : timeLabel(it.startDateTime) + '~');
     const rowsHtml = [];
-    const row = (k, vHtml) => rowsHtml.push(`<div class="sd-row"><span class="sd-k">${esc(k)}</span><span class="sd-v">${vHtml}</span></div>`);
-    row(T('schedD.time'), esc(timeStr));
-    if (it.title && !rest) row(T('schedD.plan'), `<span data-tt="${esc(it.title)}">${esc(it.title)}</span>`);
-    if (live && m) {
-      if (m.title) row(T('schedD.liveTitle'), `<span data-tt="${esc(m.title)}">${esc(m.title)}</span>`);
-      if (m.category) row(T('schedD.category'), esc(m.category));
-      if (m.viewerCount != null) row(T('schedD.viewers'), esc(nfmt(m.viewerCount)));
+    const addRow = (k, vHtml) => rowsHtml.push(`<div class="sd-row"><span class="sd-k">${esc(k)}</span><span class="sd-v">${vHtml}</span></div>`);
+    if (noinfo || !its.length) {
+      addRow(T('schedD.plan'), esc(T('sched.noinfoDesc')));
+    } else {
+      // 각 일정 항목: 시각 + 내용(휴방/스페이스/제목 등)
+      its.forEach((it) => {
+        const isR = isRest(it.title);
+        const hasT = parseOpen(it.startDateTime) != null;
+        const timeStr = isR ? T('sched.rest') : (hasT ? (it.isFixedTime ? timeLabel(it.startDateTime) : timeLabel(it.startDateTime) + '~') : T('schedD.plan'));
+        const label = isR ? T('sched.rest') : (it.title || '');
+        // 휴방은 이미 현지화된 라벨이라 번역(data-tt)을 걸지 않는다(엉뚱한 번역 방지).
+        const ttAttr = isR || !it.title ? '' : ` data-tt="${esc(it.title)}"`;
+        addRow(timeStr, `<span${ttAttr}>${esc(label)}</span>`);
+      });
+      if (live && m) {
+        if (m.title) addRow(T('schedD.liveTitle'), `<span data-tt="${esc(m.title)}">${esc(m.title)}</span>`);
+        if (m.category) addRow(T('schedD.category'), esc(m.category));
+        if (m.viewerCount != null) addRow(T('schedD.viewers'), esc(nfmt(m.viewerCount)));
+      }
     }
     $('#sdBody').innerHTML = rowsHtml.join('');
 
@@ -876,6 +950,7 @@
     $('#setInterval').addEventListener('change', (e) => save({ pollIntervalSec: Number(e.target.value) }));
 
     $('#btnCheckUpdate').addEventListener('click', () => { state.manualUpdateCheck = true; api.checkUpdate(); });
+    $('#btnReport').addEventListener('click', () => openModalEl('#contactModal'));
     $('#btnCopyDiag').addEventListener('click', copyDiagnostics);
     $('#btnUninstall').addEventListener('click', () => api.uninstall());
   }
@@ -1199,6 +1274,32 @@
     $('#schedModal').addEventListener('click', (e) => { if (e.target.id === 'schedModal') closeModalEl('#schedModal'); });
   }
 
+  // ── 이번 버전에서 바뀐 점(업데이트 후 첫 실행 1회) ──
+  function wireWhatsNew() {
+    $('#wnOk').addEventListener('click', () => closeModalEl('#whatsNewModal'));
+    $('#whatsNewModal').addEventListener('click', (e) => { if (e.target.id === 'whatsNewModal') closeModalEl('#whatsNewModal'); });
+  }
+  // 현재 버전의 릴리스 노트를 모달로 보여준다. 노트를 못 찾으면 조용히 넘어간다.
+  async function showWhatsNew(version) {
+    let rels;
+    try { rels = await api.getChangelog(); } catch { return; }
+    const entry = (rels || []).find((r) => r.version === version);
+    if (!entry) return;
+    $('#wnVer').textContent = 'v' + version;
+    $('#wnNotes').innerHTML = mdToHtml(localizeNotes(entry.notes) || T('notes.empty'));
+    openModalEl('#whatsNewModal');
+  }
+  // 업데이트 후 첫 실행(저장된 버전 ≠ 현재 버전)이면 딱 1번 안내하고, 본 버전을 기록한다.
+  // 최초 설치(저장된 버전 없음)에는 표시하지 않고 버전만 기록한다.
+  async function maybeShowWhatsNew() {
+    let cur;
+    try { cur = await api.getVersion(); } catch { return; }
+    if (!cur) return;
+    const seen = state.settings.lastShownVersion;
+    if (seen && seen !== cur) await showWhatsNew(cur);
+    if (seen !== cur) { try { state.settings = await api.setSettings({ lastShownVersion: cur }); } catch { /* ignore */ } }
+  }
+
   // ── 가로 스크롤(휠/드래그, 스크롤바 숨김) ──────
   function attachHScroll(el) {
     el.addEventListener('wheel', (e) => { if (e.deltaY !== 0) { el.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
@@ -1278,6 +1379,7 @@
     wireChangelog();
     wireTerms();
     wireSchedDetail();
+    wireWhatsNew();
 
     state.settings = await api.getSettings();
     // 저장된 언어로 정적 텍스트 번역 적용(첫 렌더 전에)
@@ -1303,6 +1405,9 @@
     });
 
     api.getVersion().then((v) => ($('#appVersion').textContent = 'v' + v));
+
+    // 업데이트 후 첫 실행이면 이번 버전에서 바뀐 점을 딱 1번 안내한다.
+    maybeShowWhatsNew();
 
     api.onMembers((members) => {
       try {

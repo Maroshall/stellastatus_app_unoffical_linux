@@ -113,7 +113,7 @@ async function install({ targetDir, desktopShortcut = true, startMenuShortcut = 
     await copyFileWithRetry(file, to);
     done += 1;
     if (done % 5 === 0 || done === total) {
-      onProgress({ phase: 'copy', percent: Math.round((done / total) * 92), text: `파일 복사 중… (${done}/${total})` });
+      onProgress({ phase: 'copy', percent: Math.round((done / total) * 92), done, total, text: `파일 복사 중… (${done}/${total})` });
     }
   }
 
@@ -210,7 +210,7 @@ async function uninstall({ onProgress = () => {} } = {}) {
   // 레지스트리 제거
   await run('reg', ['delete', UNINSTALL_KEY, '/f']);
 
-  onProgress({ phase: 'remove', percent: 70, text: '설치 폴더를 정리하는 중…' });
+  onProgress({ phase: 'cleanup', percent: 70, text: '설치 폴더를 정리하는 중…' });
   // 설치 폴더 삭제(자기 자신=제거 exe 는 나중에 정리)
   try {
     const entries = await fsp.readdir(installDir);
