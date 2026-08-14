@@ -21,6 +21,17 @@ try {
   if (m) { OWNER = m[1]; REPO = m[2]; }
 } catch { /* ignore */ }
 
+// 앱의 '현재 버전'. package.json 의 version 은 electron-builder 요구사항 때문에 유효한 semver(3자리)여야 해서,
+// 베타는 4자리 표기(예: 1.0.5.1)를 fullVersion 에 따로 둔다. 업데이트 비교/표시는 이 값을 쓴다(태그 이름과 같은 체계).
+function currentVersion() {
+  try {
+    const pkg = require('../../package.json');
+    return pkg.fullVersion || pkg.version || app.getVersion();
+  } catch {
+    return app.getVersion();
+  }
+}
+
 let emit = () => {};
 let downloadedPath = null;
 // 일반(비필수) 업데이트는 [설치하기]를 누를 때까지 다운로드를 보류한다.
@@ -145,7 +156,7 @@ async function check({ manual = false } = {}) {
     const rel = await fetchTargetRelease(beta);
     if (!rel) { emit({ state: 'none' }); return; }
     const latest = rel.tag_name || rel.name || '0.0.0';
-    if (cmpVersion(latest, app.getVersion()) <= 0) { emit({ state: 'none' }); return; }
+    if (cmpVersion(latest, currentVersion()) <= 0) { emit({ state: 'none' }); return; }
 
     // 플랫폼별 설치 파일 선택: 맥은 .dmg(아키텍처 매칭), 윈도우는 Setup.exe
     let asset;

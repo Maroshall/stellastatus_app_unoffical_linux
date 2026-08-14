@@ -19,6 +19,12 @@ const i18n = require('./i18n');
 const { translateBatch } = require('./translate');
 const { Poller, MIN_INTERVAL_SEC } = require('./poller');
 
+// 표시/업데이트용 버전. package.json 의 version 은 빌드 도구(electron-builder) 요구로 3자리 semver 여야 하므로,
+// 베타의 4자리 표기(예: 1.0.5.1)는 fullVersion 에 두고 앱 전반에서 이 값을 쓴다.
+let PKG_FULL_VERSION = '';
+try { PKG_FULL_VERSION = require('../../package.json').fullVersion || ''; } catch { /* ignore */ }
+function appVersion() { return PKG_FULL_VERSION || app.getVersion(); }
+
 const APP_ID = 'com.stellastatus.app';
 const ICON_PATH = path.join(app.getAppPath(), 'build', 'icon.png');
 const isDev = process.argv.includes('--dev') || !app.isPackaged;
@@ -332,12 +338,12 @@ function registerIpc() {
     updater.downloadAndInstall();
   });
 
-  ipcMain.handle('app:version', () => app.getVersion());
+  ipcMain.handle('app:version', () => appVersion());
   ipcMain.handle('app:changelog', () => updater.getReleases());
 
   // 진단 정보(버그 신고용). 사용자가 자기 시스템 정보를 몰라도 그대로 복사해 붙여넣을 수 있게 한다.
   ipcMain.handle('app:diagnostics', () => ({
-    version: app.getVersion(),
+    version: appVersion(),
     beta: !!store.get('betaChannel'),
     platform: process.platform,                 // 'darwin' | 'win32' | ...
     arch: process.arch,                          // 'arm64' | 'x64' | ...
