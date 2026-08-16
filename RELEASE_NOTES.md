@@ -1,26 +1,24 @@
 <!-- i18n:ko -->
-## 스텔라상태 v1.0.5.3 (베타)
+## 스텔라상태 v1.0.6
 
-> 이 버전은 정식 출시 전 **베타(시험판)** 입니다. 설정 → 일반 → **"베타 버전 받기"** 를 켠 분께 안내됩니다.
-> 사용 중 이상이 있으면 설정 → 정보 → **문제 신고** 로 알려주세요. 정식(안정) 버전을 원하시면 v1.0.5 를 사용하세요.
+> v1.0.5 이후의 개선 사항을 모두 담은 **정식(안정) 버전** 입니다.
+> 사용 중 이상이 있으면 설정 → 정보 → **문제 신고** 로 알려주세요.
 
-스텔라상태를 이용해주시는 분들께 진심으로 감사드립니다.
+스텔라상태를 이용해주시는 분들께 진심으로 감사드립니다. 이번 정식 버전은 v1.0.5 이후 베타에서 다듬어 온 기능과 개선을 하나로 모았습니다.
 
-### 이번 베타에서 새로 바뀐 것 (v1.0.5.2 이후)
-- **프로필 소셜 링크** — 멤버 카드의 프로필(아바타)을 누르면 이름이 흐려지며 오른쪽으로 소셜 링크 아이콘이 나타납니다. (치지직 · 유튜브 · X · 인스타 중 등록된 것만)
-- **오늘의 뱅온을 멤버별로 정리** — 한 멤버에게 일정이 여러 개면 **"휴방 + 스페이스"** 처럼 합쳐서 보여주고, 일정이 없는 멤버는 **"정보 없음"** 으로 표시합니다.
-- **베타 업데이트 인식 개선** — 베타를 설치한 경우, "베타 버전 받기" 를 켜지 않아도 업데이트 기록·업데이트 확인에서 최신 베타를 계속 받을 수 있습니다.
-- **Windows 설치 안내 다국어화** — 설치·업데이트 중 표시되는 진행 문구가 선택한 언어로 나옵니다.
-- **문제 신고 버튼** — 설정 → 정보에 이메일·GitHub 이슈로 바로 가는 신고 버튼을 추가했습니다.
-- **업데이트 후 안내** — 새 버전으로 업데이트하면 첫 실행 때 바뀐 점을 한 번 안내합니다.
-
-### v1.0.5 이후 누적 변경
-- **오늘의 뱅온 상세 보기** — 카드를 누르면 멤버·시각·상태와, 방송 중이면 제목·카테고리·시청자 수·썸네일을 볼 수 있습니다.
-- **일본어 검색** — 히라가나로만 입력해도 멤버가 검색됩니다.
-- **방송 카테고리 표기** — 영어/일본어로 볼 때 "저챗"이 **Talk / トーク** 로 표시됩니다.
-- **번역 로딩 표시 · 썸네일 자동 갱신 · 앱 이름 다국어** 등 표시 개선.
-- **macOS 알림** 이 뜨지 않던 문제를 개선하고, 알림이 차단된 경우 안내가 표시됩니다.
-- **알림 테스트 · 시스템 정보 복사** 버튼(설정)으로 문제를 쉽게 확인·신고할 수 있습니다.
+# 수정된 내용
+- 스텔라 카드의 프로필(아바타)을 누르면 스텔라들의 소셜 계정을 확인할 수 있습니다.
+- 한 멤버에게 일정이 여러 개면 **"휴방 + 스페이스"** 처럼 합쳐서 보여주고, 일정이 없는 멤버는 **"정보 없음"** 으로 표시합니다.
+- 카드를 누르면 멤버·시각·상태와, 방송 중이면 제목·카테고리·시청자 수·썸네일을 볼 수 있습니다.
+- 설정 → 정보에 이메일·GitHub 이슈로 바로 가는 신고 버튼을 추가했습니다.
+- 새 버전으로 업데이트하면 첫 실행 때 바뀐 점을 한 번 안내합니다.
+- 히라가나로만 입력해도 멤버가 검색됩니다.
+- 영어/일본어로 볼 때 "저챗"이 **Talk / トーク** 로 표시됩니다.
+- 설치·업데이트 중 표시되는 진행 문구가 선택한 언어로 나옵니다.
+- 번역 로딩 표시 · 썸네일 자동 갱신 · 앱 이름 다국어 등 표시를 개선하였습니다.
+- 알림 테스트 · 시스템 정보 복사 버튼(설정)으로 문제를 쉽게 확인·신고할 수 있습니다.
+- 업데이트 기록·업데이트 확인에서 최신 버전을 안정적으로 받을 수 있습니다.
+- **macOS** 알림이 뜨지 않던 문제를 개선하고, 알림이 차단된 경우 안내가 표시됩니다.
 
 ### 설치 방법
 **Windows**
@@ -38,29 +36,26 @@
 - **macOS** — macOS 12 (Monterey) 이상
 
 <!-- i18n:en -->
-## StellaStatus v1.0.5.3 (Beta)
+## StellaStatus v1.0.6
 
-> This is a **beta (test build)** released before the stable version. It is offered to users who turned on
-> Settings → General → **"Get beta versions"**. If something looks off, please report it via Settings → About → Report a problem.
-> For the stable build, use v1.0.5.
+> This is the **stable release** that brings together every improvement since v1.0.5.
+> If something looks off, please report it via Settings → About → Report a problem.
 
-Thank you so much for using StellaStatus.
+Thank you so much for using StellaStatus. This stable release consolidates the features and fixes refined in the betas since v1.0.5.
 
-### New in this beta (since v1.0.5.2)
-- **Profile social links** — tap a member’s profile (avatar) on the card and the name blurs while social icons slide out to the right (CHZZK · YouTube · X · Instagram — only the ones set).
-- **Today’s schedule grouped per member** — multiple entries for one member are combined (e.g. **"Off + Space"**), and members with nothing scheduled show **"No info"**.
-- **Better beta update detection** — if you’re on a beta build, you keep getting the newest beta in the changelog and update check even without the toggle on.
-- **Localized Windows installer** — install/update progress messages now follow the selected language.
-- **Report button** — added a report/contact button (email · GitHub issue) in Settings → About.
-- **What’s new** — after updating, the first launch shows what changed once.
-
-### Cumulative changes since v1.0.5
-- **Today’s schedule details** — tap a card to see the member, time, and status, plus live title/category/viewers/thumbnail when live.
-- **Japanese search** — find members by typing hiragana only.
-- **Category label** — "저챗" shows as **Talk / トーク** in English and Japanese.
-- **Translation loading indicator, thumbnail auto-refresh, localized app name**, and more display fixes.
-- **macOS notifications** — improved delivery and guidance when notifications are blocked.
-- **Test notification · Copy system info** buttons in Settings for easy troubleshooting.
+# What's changed
+- Tap a member’s profile (avatar) on a Stella card to view their social accounts.
+- Multiple entries for one member are combined (e.g. **"Off + Space"**), and members with nothing scheduled show **"No info"**.
+- Tap a card to see the member, time, and status, plus the title, category, viewer count, and thumbnail when live.
+- Added a report button in Settings → About that goes straight to email or a GitHub issue.
+- After updating to a new version, the first launch shows what changed once.
+- Members can be found by typing hiragana only.
+- In English/Japanese, "저챗" is shown as **Talk / トーク**.
+- Progress messages shown during install/update now appear in the selected language.
+- Improved display with a translation loading indicator, automatic thumbnail refresh, localized app name, and more.
+- Test notification and Copy system info buttons (Settings) make it easy to check and report problems.
+- The changelog and update check reliably deliver the newest version.
+- Fixed an issue where **macOS** notifications didn’t appear, and guidance is shown when notifications are blocked.
 
 ### How to install
 **Windows**
@@ -78,28 +73,26 @@ Thank you so much for using StellaStatus.
 - **macOS** — macOS 12 (Monterey) or later
 
 <!-- i18n:ja -->
-## StellaStatus v1.0.5.3 (ベータ)
+## StellaStatus v1.0.6
 
-> このバージョンは正式リリース前の **ベータ（試験版）** です。設定 → 一般 → **「ベータ版を受け取る」** をオンにした方に案内されます。
-> 不具合があれば、設定 → 情報 → 問題を報告 からお知らせください。安定版をご希望の場合は v1.0.5 をご利用ください。
+> v1.0.5 以降の改善をすべてまとめた **正式（安定）版** です。
+> 不具合があれば、設定 → 情報 → 問題を報告 からお知らせください。
 
-StellaStatus をご利用いただきありがとうございます。
+StellaStatus をご利用いただきありがとうございます。今回の正式版は、v1.0.5 以降のベータで磨いてきた機能と改善を一つにまとめました。
 
-### このベータでの新着（v1.0.5.2 以降）
-- **プロフィールのソーシャルリンク** — メンバーカードのプロフィール（アイコン）をタップすると名前がぼかされ、右側にソーシャルリンクのアイコンが現れます（CHZZK・YouTube・X・Instagram のうち登録されたもの）。
-- **今日の配信予定をメンバーごとに整理** — 1人に予定が複数ある場合は **「お休み + スペース」** のようにまとめ、予定のないメンバーは **「情報なし」** と表示します。
-- **ベータ更新の認識を改善** — ベータをインストールしている場合、「ベータ版を受け取る」をオンにしていなくても最新ベータを受け取れます。
-- **Windows インストーラーの多言語化** — インストール・更新中の進捗メッセージが選択言語で表示されます。
-- **報告ボタン** — 設定 → 情報 に、メール・GitHub Issue へ直接進む報告ボタンを追加しました。
-- **更新後の案内** — 新しいバージョンに更新すると、初回起動時に変更点を一度だけ案内します。
-
-### v1.0.5 以降の累積変更
-- **今日の配信予定の詳細** — カードをタップすると、メンバー・時刻・状態に加え、配信中はタイトル・カテゴリ・視聴者数・サムネイルを確認できます。
-- **日本語検索** — ひらがなだけでもメンバーを検索できます。
-- **カテゴリ表記** — 英語・日本語で「저챗」が **Talk / トーク** と表示されます。
-- **翻訳の読み込み表示・サムネイル自動更新・アプリ名の多言語化** など表示改善。
-- **macOS の通知** が表示されない問題を改善し、ブロックされている場合は案内を表示します。
-- **通知テスト・システム情報のコピー** ボタン（設定）で問題を確認・報告しやすくしました。
+# 変更内容
+- ステラカードのプロフィール（アイコン）をタップすると、ステラたちのソーシャルアカウントを確認できます。
+- 1人に予定が複数ある場合は **「お休み + スペース」** のようにまとめ、予定のないメンバーは **「情報なし」** と表示します。
+- カードをタップすると、メンバー・時刻・状態に加え、配信中はタイトル・カテゴリ・視聴者数・サムネイルを確認できます。
+- 設定 → 情報 に、メール・GitHub Issue へ直接進む報告ボタンを追加しました。
+- 新しいバージョンに更新すると、初回起動時に変更点を一度だけ案内します。
+- ひらがなだけでもメンバーを検索できます。
+- 英語・日本語で「저챗」が **Talk / トーク** と表示されます。
+- インストール・更新中に表示される進捗メッセージが選択言語で表示されます。
+- 翻訳の読み込み表示・サムネイル自動更新・アプリ名の多言語化など、表示を改善しました。
+- 通知テスト・システム情報のコピーボタン（設定）で問題を簡単に確認・報告できます。
+- 更新履歴・更新確認で最新バージョンを安定して受け取れます。
+- **macOS** の通知が表示されない問題を改善し、ブロックされている場合は案内を表示します。
 
 ### インストール方法
 **Windows**

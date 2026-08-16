@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('stella', {
 
   // 스케줄(뱅온 정보)
   getTodaySchedule: () => ipcRenderer.invoke('schedule:today'),
+  getScheduleRange: (after, before) => ipcRenderer.invoke('schedule:range', { after, before }),
   getArtistSchedule: (key) => ipcRenderer.invoke('schedule:artist', key),
 
   // 설정

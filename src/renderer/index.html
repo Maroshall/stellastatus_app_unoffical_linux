@@ -70,6 +70,7 @@
     <section class="schedule">
       <div class="section-head">
         <h2><span data-i18n="sched.title">오늘의 뱅온</span> <span class="src">· StelLight</span></h2>
+        <button class="cal-btn" id="btnCalendar" data-i18n-title="cal.open" title="캘린더로 보기"><span data-icon="calendar"></span></button>
       </div>
       <div class="h-scroll sched-strip" id="schedStrip">
         <div class="sched-empty" data-i18n="sched.loading">스케줄을 불러오는 중…</div>
@@ -133,6 +134,10 @@
           <div class="setting-row">
             <div><div class="s-title" data-i18n="set.notify.t">방송 시작 알림</div><div class="s-desc" data-i18n="set.notify.d">방송이 시작되면 시스템 알림을 보냅니다.</div></div>
             <label class="switch"><input type="checkbox" id="setNotify"><span></span></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="s-title" data-i18n="set.notifyOff.t">방송 종료 알림</div><div class="s-desc" data-i18n="set.notifyOff.d">방송이 끝나면(방종) 시스템 알림을 보냅니다.</div></div>
+            <label class="switch"><input type="checkbox" id="setNotifyOff"><span></span></label>
           </div>
           <div class="setting-row">
             <div><div class="s-title" data-i18n="set.notifyTest.t">알림 테스트</div><div class="s-desc" data-i18n="set.notifyTest.d">테스트 알림을 보냅니다. 알림이 보이지 않으면 시스템의 알림 권한을 확인해 주세요.</div></div>
@@ -290,6 +295,25 @@
       <button class="icon-btn changelog-close" id="closeChangelog"></button>
       <div class="cl-head"><h2 data-i18n="changelog.title">업데이트 기록</h2></div>
       <div class="cl-list" id="clList"><div class="cl-empty" data-i18n="changelog.loading">불러오는 중…</div></div>
+    </div>
+  </div>
+
+  <!-- 뱅온 캘린더 -->
+  <div class="modal-backdrop" id="calModal" hidden>
+    <div class="modal cal-modal">
+      <button class="icon-btn cal-close" id="closeCal"></button>
+      <div class="cal-head">
+        <button class="cal-nav" id="calPrev" aria-label="이전 달"></button>
+        <div class="cal-title" id="calTitle"></div>
+        <button class="cal-nav" id="calNext" aria-label="다음 달"></button>
+      </div>
+      <div class="cal-body">
+        <div class="cal-left">
+          <div class="cal-weekdays" id="calWeekdays"></div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+        <aside class="cal-detail" id="calDetail" hidden></aside>
+      </div>
     </div>
   </div>
 

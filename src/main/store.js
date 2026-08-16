@@ -29,8 +29,10 @@ const store = new Store({
     language: 'ko',
     // 방송 상태 폴링 주기(초). 너무 짧게 두면 치지직/스텔라이트 서버에 부담이 되므로 하한 30초.
     pollIntervalSec: 60,
-    // 윈도우 알림 사용 여부
+    // 윈도우 알림 사용 여부(방송 시작)
     notifyEnabled: true,
+    // 방송 종료(방종) 알림 사용 여부
+    notifyOffline: true,
     // 방송 시작 시 시스템 기본 웹브라우저로 자동 열기
     autoOpenLive: false,
     // 자동으로 브라우저를 열 멤버 채널 key 목록. null 이면 전체.

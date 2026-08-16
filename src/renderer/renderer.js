@@ -30,6 +30,18 @@
   const ttCache = { en: new Map(), ja: new Map() };
   const ttPending = { en: new Set(), ja: new Set() }; // 번역 진행 중인 원문(중복 요청 방지)
   let _ttSeq = 0;
+  // 일시적 실패(구글 rate-limit 등)로 아직 번역 안 된 항목을 자동으로 다시 시도한다.
+  // '진전 없는 라운드'가 연속으로 상한(4회)에 닿으면 포기한다(무한 반복 방지).
+  const ttRetryN = { en: 0, ja: 0 };
+  const ttRetryTimer = { en: null, ja: null };
+  function scheduleTtRetry(target) {
+    if (ttRetryTimer[target]) return;         // 이미 예약됨
+    if ((ttRetryN[target] || 0) >= 4) return;  // 상한 도달 → 포기
+    ttRetryTimer[target] = setTimeout(() => {
+      ttRetryTimer[target] = null;
+      if (I18N.lang === target) translateTitles();
+    }, 1200 * Math.max(1, ttRetryN[target])); // 점점 늘어나는 간격(1.2s, 2.4s, …)
+  }
   const TT_SPIN = '<span class="tt-spin" role="status" aria-label="translating"></span>';
   // 번역 텍스트 적용(중복 DOM 쓰기 방지). ttState 로 현재 상태를 기억한다.
   // 텍스트가 실제로 바뀌면, 마퀴가 걸린 스케줄 제목(.stt)은 새 텍스트 폭으로 마퀴를 다시 계산한다.
@@ -76,12 +88,18 @@
     } finally {
       uniq.forEach((k) => pending.delete(k));
     }
+    const before = cache.size;
     Object.entries(map).forEach(([k, v]) => v && cache.set(k, v));
+    const gained = cache.size - before; // 이번에 새로 번역된 개수
     if (seq !== _ttSeq || I18N.lang !== target) return; // 그 사이 언어/화면 바뀌면 폐기
     document.querySelectorAll('[data-tt]').forEach((e) => {
       const c = cache.get(e.dataset.tt);
       ttSetText(e, c != null ? c : e.dataset.tt); // 번역 결과에 없으면 원문 유지(스피너 제거)
     });
+    // 아직 번역 안 된 항목이 남았으면 자동 재시도. 진전이 있었으면 재시도 예산을 리셋한다.
+    const stillNeed = [...document.querySelectorAll('[data-tt]')].some((e) => !cache.has(e.dataset.tt));
+    if (stillNeed) { if (gained > 0) ttRetryN[target] = 0; ttRetryN[target] = (ttRetryN[target] || 0) + 1; scheduleTtRetry(target); }
+    else ttRetryN[target] = 0;
   }
 
   // ── 아이콘 팩(Lucide, MIT) ───────────────────
@@ -105,19 +123,23 @@
     clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
     sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
     star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.12 2.12 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.12 2.12 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.12 2.12 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.12 2.12 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.12 2.12 0 0 0 1.597-1.16z"/>',
-    // 소셜 브랜드 아이콘
-    youtube: '<path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>',
-    xlogo: '<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>',
-    instagram: '<rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>',
-    chzzk: '<circle cx="12" cy="12" r="10"/><polygon points="10 8.5 16 12 10 15.5"/>',
+    calendar: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>',
+    chevronLeft: '<path d="m15 18-6-6 6-6"/>',
+    chevronRight: '<path d="m9 18 6-6-6-6"/>',
+    // 소셜 브랜드 아이콘 — 각 브랜드 공식 로고(Simple Icons). 모두 채움(fill) 방식.
+    youtube: '<path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>',
+    xlogo: '<path d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/>',
+    instagram: '<path d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/>',
   };
-  // fill 로 그리는 아이콘. youtube 는 재생 삼각형을 파낼 수 있게 evenodd 를 쓴다.
-  const FILLED = new Set(['play', 'youtube', 'xlogo']);
+  // CHZZK 공식 심볼(아이콘, 브랜드 그린). 이름 없는 로고 마크만 사용한다. 브랜드 가이드상 형태·색은 변형하지 않는다.
+  const CHZZK_LOGO = '<svg viewBox="0 0 32 32" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M24.106 24.664v-4.782H16.92l7.911-10.915h-6.41l1.94-2.678h-6.41L8.653 13.6h6.41l-8.02 11.065h17.063Z"/></svg>';
+  // fill 로 그리는 아이콘.
+  const FILLED = new Set(['play', 'youtube', 'xlogo', 'instagram']);
   function icon(name, size = 18) {
     const p = ICONS[name];
     if (!p) return '';
     const attrs = FILLED.has(name)
-      ? 'fill="currentColor" stroke="none" fill-rule="evenodd"'
+      ? 'fill="currentColor" stroke="none"'
       : 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
     return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" ${attrs}>${p}</svg>`;
   }
@@ -280,16 +302,16 @@
       : `<div class="m-title offline">${m.error ? T('card.offErr') : T('card.offIdle')}</div>
          <div class="m-category"></div>`;
 
-    // 소셜 링크(있는 것만) — 프로필을 누르면 이름이 블러되며 오른쪽으로 아이콘이 튀어나온다.
+    // 소셜 링크(있는 것만) — 프로필을 누르면 이름이 블러되며 오른쪽으로 아이콘이 차례로 튀어나온다.
     const SOCIALS = [
-      { k: 'chzzk', ic: 'chzzk', url: m.social && m.social.chzzk },
-      { k: 'youtube', ic: 'youtube', url: m.social && m.social.youtube },
-      { k: 'x', ic: 'xlogo', url: m.social && m.social.x },
-      { k: 'instagram', ic: 'instagram', url: m.social && m.social.instagram },
+      { k: 'chzzk', svg: CHZZK_LOGO, url: m.social && m.social.chzzk },
+      { k: 'youtube', svg: icon('youtube', 16), url: m.social && m.social.youtube },
+      { k: 'x', svg: icon('xlogo', 14), url: m.social && m.social.x },
+      { k: 'instagram', svg: icon('instagram', 16), url: m.social && m.social.instagram },
     ].filter((s) => s.url);
     const socialHtml = SOCIALS.length
-      ? `<div class="social-icons">${SOCIALS.map((s, i) =>
-          `<button class="social-ico s-${s.k}" data-url="${esc(s.url)}" style="--i:${i}" title="${s.k}" aria-label="${s.k}">${icon(s.ic, 15)}</button>`).join('')}</div>`
+      ? `<div class="social-icons" style="--n:${SOCIALS.length}">${SOCIALS.map((s, i) =>
+          `<button class="social-ico s-${s.k}" data-url="${esc(s.url)}" style="--i:${i}" title="${s.k}" aria-label="${s.k}">${s.svg}</button>`).join('')}</div>`
       : '';
 
     const pinTip = esc(isPinned(m.key) ? T('card.unpin') : T('card.pin'));
@@ -297,7 +319,7 @@
       <div class="thumb-wrap">${thumb}${badge}<button class="pin-btn${isPinned(m.key) ? ' on' : ''}" data-pin="${esc(m.key)}" title="${pinTip}" aria-label="${pinTip}">${icon('star', 15)}</button></div>
       <div class="card-body">
         <div class="member-head${SOCIALS.length ? ' has-social' : ''}">
-          <div class="ava-wrap" role="button" tabindex="0" aria-label="${esc(T('card.social'))}">${avatar}<span class="ava-more">${icon('external', 12)}</span></div>
+          <div class="ava-wrap${SOCIALS.length ? ' clickable' : ''}" role="button" tabindex="0" aria-label="${esc(T('card.social'))}">${avatar}</div>
           <div class="m-names">
             <div class="m-name">${esc(I18N.memberName(m))} <span class="gen-chip">${esc(I18N.genName(m.gen, m.genName))}</span></div>
             <div class="m-eng">${esc(I18N.lang === 'ko' ? (m.nameEng || '') : (m.name || ''))}</div>
@@ -624,11 +646,26 @@
     if (data && data.error) { state.scheduleItems = 'error'; renderSchedule(true); return; }
     let items = Array.isArray(data) ? data : [];
     const today = kstDateStr(Date.now());
-    state.scheduleItems = items.filter((it) => {
-      if (/강지/.test(it.stellarName || '')) return false; // 스텔라이브 멤버 아님
-      const ms = parseOpen(it.startDateTime);
-      return ms == null || kstDateStr(ms) === today; // KST 기준 오늘만(시간 없는 휴방 등은 유지)
-    });
+    const yesterday = kstDateStr(Date.now() - 86400000);
+    state.scheduleItems = items
+      .filter((it) => {
+        if (/강지/.test(it.stellarName || '')) return false; // 스텔라이브 멤버 아님
+        const ms = parseOpen(it.startDateTime);
+        if (ms == null) return true; // 시간 없는 항목(휴방 등)은 오늘 것으로 유지
+        const d = kstDateStr(ms);
+        // 오늘 것 + 어제 시작한 '방송'(휴방 제외)만 남긴다. 어제 것은 진행 중일 때만 표시(아래 분류에서 판단).
+        return d === today || (d === yesterday && !isRest(it.title));
+      })
+      .map((it) => {
+        const ms = parseOpen(it.startDateTime);
+        if (ms == null || isRest(it.title)) return it;
+        const d = kstDateStr(ms);
+        const kstHour = new Date(ms + KST_OFFSET).getUTCHours();
+        // 밤샘/이월 방송으로 취급: 어제 시작분, 또는 오늘 '새벽(6시 이전)' 시작분.
+        // → 지금 라이브일 때만 노출하고, 끝났으면(오프라인) 종료로 남기지 않는다(분류에서 제외).
+        const overnight = d === yesterday || (d === today && kstHour < 6);
+        return overnight ? { ...it, _carry: true, _fromYesterday: d === yesterday } : it;
+      });
     renderSchedule(true);
   }
 
@@ -642,7 +679,16 @@
     // 로스터의 모든 멤버를 먼저 등록(일정 없는 멤버도 '정보 없음'으로 나오게).
     const groups = new Map(); // key -> { m, name, key, items }
     state.members.forEach((m) => groups.set(m.key, { m, name: I18N.memberName(m), key: m.key, items: [] }));
+    // 오늘자 '방송'(휴방 아님)이 있는 멤버 — 이런 멤버는 어제 이월분을 굳이 겹쳐 보이지 않는다.
+    const hasTodayLive = new Set();
+    items.forEach((it) => { if (!it._carry && !isRest(it.title)) { const mm = scheduleMember(it); if (mm) hasTodayLive.add(mm.key); } });
     items.forEach((it) => {
+      // 어제 시작 항목(_carry): 그 멤버가 지금 라이브(방송이 오늘까지 이어짐)이고,
+      // 오늘자 방송이 따로 없을 때만 '오늘의 뱅온'에 어제자 정보로 표시한다.
+      if (it._carry) {
+        const cm = scheduleMember(it);
+        if (!cm || !cm.isLive || hasTodayLive.has(cm.key)) return;
+      }
       const m = scheduleMember(it);
       if (m && groups.has(m.key)) { groups.get(m.key).items.push(it); return; }
       // 로스터에 없는(졸업 등) 이름은 별도 그룹으로.
@@ -665,6 +711,16 @@
       // 남은 '예정' 이 하나도 없으면(모두 지난 확정 시각) 종료로 본다.
       const hasFuture = its.some((it) => !isRest(it.title) && (!it.isFixedTime || (parseOpen(it.startDateTime) ?? Infinity) >= now));
       const ended = !live && !allRest && !hasFuture;
+      // '종료'는 방금 끝난 방송에만 쓴다. 밤샘/새벽처럼 시작이 오래전(5시간 초과)인 방송은
+      // 하루 종일 '종료'로 남지 않고 '정보 없음'으로 처리한다.
+      if (ended) {
+        const starts = its.filter((it) => !isRest(it.title)).map((it) => parseOpen(it.startDateTime)).filter((x) => x != null);
+        const latest = starts.length ? Math.max(...starts) : null;
+        if (latest == null || now - latest > 5 * 60 * 60 * 1000) {
+          rows.push({ ...g, items: [], noinfo: true, rest: false, live, ended: false, upcoming: false, t: Infinity, titleLabel: '', primary: null, order, pinnedM });
+          return;
+        }
+      }
       const upcoming = !live && !allRest && !ended;
       const times = its.map((it) => parseOpen(it.startDateTime)).filter((x) => x != null);
       const t = times.length ? Math.min(...times) : Infinity;
@@ -685,52 +741,101 @@
   }
   const scheduleSig = (rows) => rows.map((r) => `${r.key}|${r.noinfo ? 'N' : r.titleLabel}|${r.t}|${r.live ? 'L' : r.ended ? 'E' : r.rest ? 'R' : '-'}|${r.pinnedM ? 'P' : ''}`).join(';');
 
+  // 카드 한 장의 내용 서명(내용이 바뀔 때만 다시 채워 마퀴 리셋을 막는다).
+  // 언어(I18N.lang)를 포함해, 언어를 바꾸면 카드가 다시 채워져 멤버 이름·라벨이 함께 갱신되게 한다
+  // (예전엔 제목이 원본 그대로라 서명이 같아, 이름만 옛 언어로 남던 문제).
+  const schedRowSig = (r) => `${I18N.lang}|${r.noinfo ? 'N' : r.titleLabel}|${r.t}|${r.live ? 'L' : r.ended ? 'E' : r.rest ? 'R' : '-'}|${r.pinnedM ? 'P' : ''}`;
+
+  // 카드 엘리먼트에 row 내용을 채운다(신규/갱신 공용). className 은 상태에 맞게 매번 새로.
+  function fillSchedCard(card, row) {
+    const { items: its, name, noinfo, rest, live, ended, upcoming, titleLabel, primary } = row;
+    const badge = live
+      ? `<span class="sched-started live"><span class="ss-dot"></span>${esc(T('sched.started'))}</span>`
+      : ended
+        ? `<span class="sched-started ended">${esc(T('sched.ended'))}</span>`
+        : (!noinfo && upcoming)
+          ? `<span class="sched-started upcoming">${esc(T('sched.upcoming'))}</span>`
+          : '';
+    let timeHtml;
+    if (noinfo) timeHtml = `<span class="sched-time noinfo">${esc(T('sched.noinfo'))}</span>`;
+    else if (rest) timeHtml = `<span class="sched-time rest">${esc(T('sched.rest'))}</span>`;
+    else {
+      const it = primary;
+      const hasT = it && parseOpen(it.startDateTime) != null;
+      let tl = hasT ? (it.isFixedTime ? timeLabel(it.startDateTime) : timeLabel(it.startDateTime) + '~') : '';
+      // 어제 시작해 오늘까지 이어지는 방송은 시각 앞에 '어제'를 붙여 혼동을 막는다(오늘 새벽 시작분은 그대로).
+      if (tl && it && it._carry && it._fromYesterday) tl = `${I18N.lang === 'en' ? 'Yesterday' : I18N.lang === 'ja' ? '昨日' : '어제'} ${tl}`;
+      timeHtml = `<span class="sched-time">${esc(tl)}</span>`;
+    }
+    const showTitle = !noinfo && titleLabel && !(rest && its.length === 1);
+    // 방송 제목(휴방 아님)은 여러 개가 합쳐진 조합('저챗 + 노래')이어도 통째로 번역에 넘긴다.
+    // (예전엔 단발 제목만 번역돼서 일부 뱅온 정보가 번역이 안 되던 문제)
+    const allNonRest = !noinfo && Array.isArray(its) && its.length > 0 && its.every((it) => !isRest(it.title));
+    const ttAttr = allNonRest && titleLabel ? ` data-tt="${esc(titleLabel)}"` : '';
+    // 진입/퇴장 애니메이션 클래스는 유지한 채 상태(past/live/noinfo)만 갱신.
+    const anim = (card.classList.contains('sched-entering') ? ' sched-entering' : '') + (card.classList.contains('sched-collapsed') ? ' sched-collapsed' : '');
+    card.className = 'sched-card' + (ended ? ' past' : '') + (live ? ' live' : '') + (noinfo ? ' noinfo' : '') + anim;
+    card.innerHTML = `
+      <div class="sched-time-row">${timeHtml}${badge}</div>
+      <div class="sched-name">${esc(name)}</div>
+      ${showTitle ? `<div class="sched-title"><span class="stt"${ttAttr}>${esc(titleLabel)}</span></div>` : ''}`;
+    card.onclick = () => openSchedDetail(row);
+    card._csig = schedRowSig(row);
+  }
+
+  // 사라지는 카드: 접힘 애니메이션 후 DOM 제거.
+  function leaveSchedCard(el) {
+    if (el._leaving) return;
+    el._leaving = true;
+    el.style.pointerEvents = 'none';
+    el.classList.add('sched-collapsed');
+    setTimeout(() => { el.remove(); }, 340);
+  }
+
+  // 키(멤버) 기준으로 기존 카드를 재사용/추가/제거 → 추가·제거만 애니메이션되고 나머지는 유지.
+  function reconcileSchedule(strip, rows) {
+    // 메시지/키 없는 잔여 노드 정리(빈/에러 → 카드 전환 등).
+    [...strip.children].forEach((el) => { if (!(el.dataset && el.dataset.key) && !el._leaving) el.remove(); });
+    const existing = new Map();
+    [...strip.children].forEach((el) => { if (el.dataset && el.dataset.key && !el._leaving) existing.set(el.dataset.key, el); });
+    const newKeys = new Set(rows.map((r) => r.key));
+    // 제거: 새 목록에 없는 카드
+    existing.forEach((el, key) => { if (!newKeys.has(key)) leaveSchedCard(el); });
+    // 추가/갱신 + 순서 정렬
+    let prev = null;
+    rows.forEach((row) => {
+      let el = existing.get(row.key);
+      if (el) {
+        if (el._csig !== schedRowSig(row)) { fillSchedCard(el, row); applyMarquee(el.querySelector('.sched-title')); }
+      } else {
+        el = document.createElement('div');
+        el.dataset.key = row.key;
+        fillSchedCard(el, row);
+        el.classList.add('sched-entering'); // 키프레임 진입 애니메이션(삽입 즉시 자동 재생)
+        el.addEventListener('animationend', () => el.classList.remove('sched-entering'), { once: true });
+        (prev ? prev.after(el) : strip.prepend(el));
+        setTimeout(() => { el.classList.remove('sched-entering'); applyMarquee(el.querySelector('.sched-title')); }, 360);
+      }
+      // 순서 맞추기(prev 다음으로 이동)
+      if (prev) { if (prev.nextSibling !== el) prev.after(el); }
+      else if (strip.firstChild !== el) strip.prepend(el);
+      prev = el;
+    });
+  }
+
   function renderSchedule(force = false) {
     const strip = $('#schedStrip');
-    if (state.scheduleItems === 'error') { strip.innerHTML = `<div class="sched-error">${esc(T('sched.error'))}</div>`; return; }
+    if (state.scheduleItems === 'error') { strip.innerHTML = `<div class="sched-error">${esc(T('sched.error'))}</div>`; state._schedSig = '__err'; return; }
     if (!Array.isArray(state.scheduleItems)) return; // 아직 로드 전
 
     const rows = classifyScheduleRows();
-    if (!rows || !rows.length) { strip.innerHTML = `<div class="sched-empty">${esc(T('sched.empty'))}</div>`; return; }
+    if (!rows || !rows.length) { strip.innerHTML = `<div class="sched-empty">${esc(T('sched.empty'))}</div>`; state._schedSig = '__empty'; return; }
     const sig = scheduleSig(rows);
-    // 분류(시작/종료/순서)가 실제로 바뀔 때만 다시 그린다(마퀴 애니메이션 리셋 방지).
+    // 분류(시작/종료/순서)가 실제로 바뀔 때만 반영한다.
     if (!force && sig === state._schedSig) return;
     state._schedSig = sig;
 
-    strip.innerHTML = '';
-    rows.forEach((row) => {
-      const { items: its, name, noinfo, rest, live, ended, upcoming, titleLabel, primary } = row;
-      const badge = live
-        ? `<span class="sched-started live"><span class="ss-dot"></span>${esc(T('sched.started'))}</span>`
-        : ended
-          ? `<span class="sched-started ended">${esc(T('sched.ended'))}</span>`
-          : (!noinfo && upcoming)
-            ? `<span class="sched-started upcoming">${esc(T('sched.upcoming'))}</span>`
-            : '';
-      // 시각 칸: 정보없음 → '정보 없음', 휴방 → '휴방', 그 외 → 대표 항목 시각.
-      let timeHtml;
-      if (noinfo) timeHtml = `<span class="sched-time noinfo">${esc(T('sched.noinfo'))}</span>`;
-      else if (rest) timeHtml = `<span class="sched-time rest">${esc(T('sched.rest'))}</span>`;
-      else {
-        const it = primary;
-        const hasT = it && parseOpen(it.startDateTime) != null;
-        const tl = hasT ? (it.isFixedTime ? timeLabel(it.startDateTime) : timeLabel(it.startDateTime) + '~') : '';
-        timeHtml = `<span class="sched-time">${tl}</span>`;
-      }
-      // 제목 라인: 정보없음/휴방단독이면 생략, 그 외엔 합친 라벨. 단일 제목만 번역(data-tt).
-      const single = !rest && its && its.length === 1 ? its[0] : null;
-      const showTitle = !noinfo && titleLabel && !(rest && its.length === 1);
-      const ttAttr = single && single.title ? ` data-tt="${esc(single.title)}"` : '';
-      const card = document.createElement('div');
-      card.className = 'sched-card' + (ended ? ' past' : '') + (live ? ' live' : '') + (noinfo ? ' noinfo' : '');
-      card.innerHTML = `
-        <div class="sched-time-row">${timeHtml}${badge}</div>
-        <div class="sched-name">${esc(name)}</div>
-        ${showTitle ? `<div class="sched-title"><span class="stt"${ttAttr}>${esc(titleLabel)}</span></div>` : ''}`;
-      card.addEventListener('click', () => openSchedDetail(row));
-      strip.appendChild(card);
-      applyMarquee(card.querySelector('.sched-title'));
-    });
+    reconcileSchedule(strip, rows);
     translateTitles();
   }
 
@@ -800,6 +905,360 @@
     translateTitles(); // 제목/카테고리를 현재 언어로(캐시 있으면 즉시)
   }
 
+  // ── 뱅온 캘린더 ──────────────────────────────
+  // 보고 있는 연/월(m: 0~11, KST 기준). detailDay: 오른쪽 세부 패널에 띄운 날짜 키(없으면 '').
+  // cells/events/todayKey 는 한 번 불러온 뒤 세부 패널 리렌더에서 재사용(재요청 방지).
+  const CAL = { y: 0, m: 0, detailDay: '', cells: [], events: [], dayMembers: new Map(), todayKey: '' };
+  const CAL_MAX_LANES = 4; // 한 주에 기본으로 보여줄 최대 막대 줄 수(넘치면 '+N' 으로 접음)
+  const CAL_BAR_TOP = 30;  // 막대 시작 y(px) — 날짜 숫자/오늘 강조 링과 겹치지 않도록 아래에서 시작
+  const CAL_LANE_H = 16;   // 막대 한 줄 높이(px) — 6주가 스크롤 없이 들어가도록 촘촘하게
+  const mdOf = (dk) => { const p = dk.split('-'); return `${+p[1]}/${+p[2]}`; }; // '2026-08-05' → '8/5'
+  const CAL_WD = {
+    ko: ['일', '월', '화', '수', '목', '금', '토'],
+    en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    ja: ['日', '月', '火', '水', '木', '金', '土'],
+  };
+  const CAL_MON_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const dayKey = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`;
+  const dayDiff = (a, b) => (Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000;
+
+  function calTitle(y, m) {
+    const l = I18N.lang;
+    if (l === 'en') return `${CAL_MON_EN[m]} ${y}`;
+    if (l === 'ja') return `${y}年${m + 1}月`;
+    return `${y}년 ${m + 1}월`;
+  }
+
+  async function openCalendar() {
+    const now = new Date(Date.now() + KST_OFFSET); // UTC 필드 = KST 벽시계
+    CAL.y = now.getUTCFullYear();
+    CAL.m = now.getUTCMonth();
+    closeDayDetail();
+    $('#calWeekdays').innerHTML = (CAL_WD[I18N.lang] || CAL_WD.ko).map((w, i) => `<div class="cal-wd${i === 0 ? ' sun' : ''}">${esc(w)}</div>`).join('');
+    openModalEl('#calModal');
+    await loadCalendar();
+  }
+  // 월 이동: 켜놓은 오른쪽 세부 패널은 그대로 유지한다(원래 선택한 날의 일정을 계속 보여줌).
+  function calShift(delta) { let m = CAL.m + delta, y = CAL.y; if (m < 0) { m = 11; y--; } else if (m > 11) { m = 0; y++; } CAL.y = y; CAL.m = m; loadCalendar(); }
+
+  async function loadCalendar() {
+    $('#calTitle').textContent = calTitle(CAL.y, CAL.m);
+    const grid = $('#calGrid');
+    grid.innerHTML = `<div class="cal-loading"><span class="cl-spinner"></span></div>`;
+
+    // 6주(42칸) 그리드: 그 달 1일이 든 주의 일요일부터.
+    const firstUTC = Date.UTC(CAL.y, CAL.m, 1);
+    const dow = new Date(firstUTC).getUTCDay();
+    const startUTC = firstUTC - dow * 86400000;
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(startUTC + i * 86400000);
+      const y = d.getUTCFullYear(), m = d.getUTCMonth(), day = d.getUTCDate();
+      cells.push({ y, m, day, key: dayKey(y, m, day), inMonth: m === CAL.m });
+    }
+    const todayKey = (() => { const t = new Date(Date.now() + KST_OFFSET); return dayKey(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()); })();
+
+    let items = [];
+    try {
+      const data = await api.getScheduleRange(cells[0].key + 'T00:00:00', cells[41].key + 'T23:59:59');
+      items = Array.isArray(data) ? data : [];
+    } catch { items = []; }
+
+    CAL.cells = cells;
+    CAL.todayKey = todayKey;
+    const built = buildCalEvents(items); // { events, dayMembers }
+    CAL.events = assignLanes(built.events);
+    CAL.dayMembers = built.dayMembers;
+    renderCalendarGrid();
+  }
+
+  // 캘린더 그리드 렌더(불러온 데이터 재사용). 세부 패널 열고 닫을 때도 재요청 없이 이 함수만 다시 부른다.
+  // 한 주에 막대가 너무 많으면(CAL_MAX_LANES 초과) 아래를 '+N' 으로 접어 '벽'처럼 되지 않게 한다.
+  // '+N' 을 누르면 그 날의 세부 일정을 오른쪽 패널에 띄운다(openDayDetail).
+  function renderCalendarGrid() {
+    const { cells, events, todayKey } = CAL;
+    // 전체 화면을 꽉 채우므로, 그리드 높이에 맞춰 한 주에 보여줄 줄 수를 자동으로 늘린다(스크롤 없이 최대한 다 표시).
+    let availH = $('#calGrid').clientHeight;
+    if (!availH || availH < 300) availH = Math.max(560, window.innerHeight - 160); // 아직 레이아웃 전이면 창 기준 추정
+    const maxLanes = Math.max(4, Math.min(12, Math.floor((availH / 6 - CAL_BAR_TOP - 16) / CAL_LANE_H)));
+    let html = '';
+    for (let w = 0; w < 6; w++) {
+      const week = cells.slice(w * 7, w * 7 + 7);
+      const wStart = week[0].key, wEnd = week[6].key;
+
+      let barsHtml = '';
+      let shownLanes = 0;           // 실제로 그린 막대 줄 수(주 높이 계산용)
+      const hidden = [0, 0, 0, 0, 0, 0, 0]; // 요일별 접힌(숨긴) 막대 수
+      events.forEach((ev) => {
+        if (ev.end < wStart || ev.start > wEnd) return; // 이 주와 안 겹침
+        const segStart = ev.start < wStart ? wStart : ev.start;
+        const segEnd = ev.end > wEnd ? wEnd : ev.end;
+        const c1 = week.findIndex((c) => c.key === segStart);
+        const c2 = week.findIndex((c) => c.key === segEnd);
+        if (ev.lane >= maxLanes) { for (let c = c1; c <= c2; c++) hidden[c]++; return; } // 한도 초과 → '+N'
+        const isStart = ev.start === segStart, isEnd = ev.end === segEnd;
+        const left = (c1 / 7) * 100, width = ((c2 - c1 + 1) / 7) * 100;
+        const top = CAL_BAR_TOP + ev.lane * CAL_LANE_H; // 날짜 숫자(오늘 강조 링 포함) 아래에서 시작
+        shownLanes = Math.max(shownLanes, ev.lane + 1);
+        // 좌우로 살짝 띄워(2px) 막대끼리 붙지 않게 하고, 어두운 막대는 글자를 흰색으로(inkFor).
+        // 라벨은 막대의 실제 시작 주뿐 아니라, 다음 주로 이어져 그 주 왼쪽 끝(c1===0)에서 시작하는
+        // 조각에도 반복 표기한다 → 이어지는 조각이 '빈 상자'로 보이지 않게(구글 캘린더 방식).
+        const showLabel = isStart || c1 === 0;
+        // 빙하기는 '언제부터~언제까지' 기간을 라벨에 붙인다('빙하기'는 언어별 표기).
+        // 방송 제목은 data-tt 로 감싸 translateTitles() 가 현재 언어로 번역한다(멤버 이름은 이미 언어별).
+        const barLabel = ev.ice
+          ? `❄ ${esc(ev.name)} · ${esc(T('cal.ice'))} (${mdOf(ev.start)}~${mdOf(ev.end)})`
+          : (ev.title ? `${esc(ev.name)} · <span data-tt="${esc(ev.title)}">${esc(ev.title)}</span>` : esc(ev.name));
+        barsHtml += `<div class="cal-bar${isStart ? ' s' : ''}${isEnd ? ' e' : ''}${ev.ice ? ' ice' : ''}" data-ev="${esc(ev.id)}" style="left:calc(${left}% + 2px);width:calc(${width}% - 4px);top:${top}px;${ev.ice ? '' : `color:${inkFor(ev.accent)};`}--bar:${esc(ev.accent)}">${showLabel ? `<span class="cal-bar-t">${barLabel}</span>` : ''}</div>`;
+      });
+
+      // '+N' 접힘 표시(요일별) — 누르면 그 날 세부 패널을 연다.
+      const rowTop = CAL_BAR_TOP + shownLanes * CAL_LANE_H;
+      let moreHtml = '';
+      hidden.forEach((n, ci) => {
+        if (!n) return;
+        moreHtml += `<div class="cal-more" data-day="${esc(week[ci].key)}" style="left:calc(${(ci / 7) * 100}% + 2px);width:calc(${100 / 7}% - 4px);top:${rowTop}px">+${n}</div>`;
+      });
+
+      const daysHtml = week.map((c) => `<div class="cal-day${c.inMonth ? '' : ' out'}${c.key === todayKey ? ' today' : ''}${c.key === CAL.detailDay ? ' sel' : ''}"><span class="cal-dnum">${c.day}</span></div>`).join('');
+      const hasRow = hidden.some((n) => n > 0);
+      const minH = Math.max(58, CAL_BAR_TOP + shownLanes * CAL_LANE_H + (hasRow ? 16 : 6));
+      html += `<div class="cal-week" style="min-height:${minH}px">${daysHtml}${barsHtml}${moreHtml}</div>`;
+    }
+    $('#calGrid').innerHTML = html;
+    translateTitles(); // 막대 제목(data-tt)을 현재 언어로 — 캐시 있으면 즉시, 없으면 번역 요청
+  }
+
+  // 오른쪽 세부 일정 패널 열기/닫기/렌더 ─────────────────────
+  function openDayDetail(dk) {
+    CAL.detailDay = dk;
+    renderCalendarDetail();
+    const d = $('#calDetail');
+    d.hidden = false;
+    // 다음 프레임에 .open 을 붙여 flex-basis 트랜지션(0→열림)이 재생되게 한다.
+    // rAF 는 백그라운드/최소화 시 멈출 수 있어 setTimeout 도 함께 걸어 확실히 열리게 한다.
+    requestAnimationFrame(() => d.classList.add('open'));
+    setTimeout(() => d.classList.add('open'), 30);
+    renderCalendarGrid(); // 선택한 날 강조
+  }
+  function closeDayDetail() {
+    const d = $('#calDetail');
+    CAL.detailDay = '';
+    if (CAL.cells.length) renderCalendarGrid(); // 강조 해제
+    if (!d) return;
+    if (!d.classList.contains('open')) { d.hidden = true; return; }
+    d.classList.remove('open');
+    // 닫힘 트랜지션이 끝난 뒤에 감춘다(중간에 다시 열리면 그대로 둠).
+    setTimeout(() => { if (CAL.detailDay === '') d.hidden = true; }, 280);
+  }
+  // 세부 항목 한 줄의 제목 HTML(빙하기 기간 포함).
+  // 빙하기 라벨은 언어별(T)로, 방송 제목은 data-tt 로 감싸 translateTitles() 가 번역한다.
+  function detailTitleHtml(ev) {
+    const combined = ev.titles.join(' + ');
+    const ttSpan = combined ? `<span data-tt="${esc(combined)}">${esc(combined)}</span>` : '';
+    if (!ev.ice) return ttSpan;
+    const iceLabel = `${esc(T('cal.ice'))}${ev.iceStart ? ` (${mdOf(ev.iceStart)}~${mdOf(ev.iceEnd)})` : ''}`;
+    return combined ? `${iceLabel} · ${ttSpan}` : iceLabel;
+  }
+  function fillDetailItem(el, ev) {
+    el.className = 'cd-item' + (ev.ice ? ' ice' : '');
+    el.innerHTML = `
+      <span class="cd-dot" style="background:${esc(ev.accent)}"></span>
+      <div class="cd-txt">
+        <div class="cd-name">${ev.ice ? '❄ ' : ''}${esc(ev.name)}</div>
+        <div class="cd-title">${detailTitleHtml(ev)}</div>
+      </div>`;
+  }
+  // 항목을 순차 등장(stagger). 재생 중이면 리셋 후 다시 → 날짜를 바꿔도 전체가 다시 차례로 뜬다.
+  function staggerInDetailItem(el, idx) {
+    el.classList.remove('cd-entering');
+    void el.offsetWidth; // 애니메이션 리셋
+    el.style.animationDelay = idx * 40 + 'ms';
+    el.classList.add('cd-entering');
+    const clear = () => { el.classList.remove('cd-entering'); el.style.animationDelay = ''; };
+    el.addEventListener('animationend', clear, { once: true });
+    setTimeout(clear, 520 + idx * 40);
+  }
+  // 사라지는 항목: 세로로 접히며(위로) 사라진 뒤 제거.
+  function leaveDetailItem(el) {
+    if (el._leaving) return;
+    el._leaving = true;
+    el.style.pointerEvents = 'none';
+    el.style.maxHeight = el.offsetHeight + 'px';
+    void el.offsetHeight; // reflow 강제 → 이어지는 0 으로의 트랜지션이 재생되게
+    el.classList.add('cd-leaving');
+    el.style.maxHeight = '0px';
+    setTimeout(() => el.remove(), 300);
+  }
+
+  function renderCalendarDetail() {
+    const dk = CAL.detailDay;
+    if (!dk) return;
+    // 그 날의 멤버 목록(같은 스텔라는 하나로 묶여 제목이 합쳐져 있음). 빙하기 → 이름 순.
+    const list = [...(CAL.dayMembers.get(dk) || new Map()).values()]
+      .sort((a, b) => (!!b.ice !== !!a.ice ? (a.ice ? -1 : 1) : a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+      .map((ev) => ({ ...ev, _key: (ev.m && ev.m.key) || ev.name }));
+    const d = new Date(dk + 'T00:00:00Z');
+    const wd = (CAL_WD[I18N.lang] || CAL_WD.ko)[d.getUTCDay()];
+    const mo = d.getUTCMonth(), day = d.getUTCDate();
+    const dateLabel = I18N.lang === 'en' ? `${CAL_MON_EN[mo]} ${day}` : I18N.lang === 'ja' ? `${mo + 1}月${day}日` : `${mo + 1}월 ${day}일`;
+
+    // 패널 골격은 한 번만 만들고(헤더/카운트/리스트), 리스트만 키(멤버) 기준으로 갱신한다.
+    const panel = $('#calDetail');
+    let inner = panel.querySelector('.cd-inner');
+    if (!inner) {
+      panel.innerHTML = `<div class="cd-inner"><div class="cd-head"><div class="cd-date"></div><button class="cd-close" id="calDetailClose" aria-label="닫기">✕</button></div><div class="cd-count"></div><div class="cd-list"></div></div>`;
+      inner = panel.querySelector('.cd-inner');
+    }
+    inner.querySelector('.cd-date').innerHTML = `${esc(dateLabel)} <span class="cd-dow${d.getUTCDay() === 0 ? ' sun' : ''}">${esc(wd)}</span>`;
+    inner.querySelector('.cd-count').textContent = `${list.length}${T('cal.count')}`;
+
+    const listEl = inner.querySelector('.cd-list');
+    // 새 목록을 그린다(비우고 차례로 등장).
+    const build = () => {
+      listEl.innerHTML = '';
+      if (!list.length) { listEl.innerHTML = `<div class="cd-empty">${esc(T('cal.noSchedule') || '일정이 없어요')}</div>`; return; }
+      list.forEach((ev, idx) => {
+        const el = document.createElement('div');
+        el.dataset.k = ev._key;
+        fillDetailItem(el, ev);
+        listEl.appendChild(el);
+        staggerInDetailItem(el, idx);
+      });
+      translateTitles(); // 세부 패널 제목(data-tt)도 현재 언어로
+    };
+    // 이미 다른 날 내용이 있으면: 먼저 전부 페이드 아웃 → 그다음 새 내용이 차례로 등장(사라지고 다시 뜨는 전환).
+    const hadContent = listEl.querySelector('.cd-item, .cd-empty');
+    if (hadContent) {
+      [...listEl.children].forEach((el) => {
+        el.style.transition = 'opacity .16s ease, transform .16s ease';
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(12px)';
+        el.style.pointerEvents = 'none';
+      });
+      setTimeout(build, 175);
+    } else {
+      build();
+    }
+  }
+
+  // 연속된 날짜 목록(정렬 무관)을 [start,end] 구간들로 묶는다. 예) 3,4,5,8 → [[3,5],[8,8]]
+  function mergeDateRuns(dates) {
+    const sorted = [...dates].sort();
+    const runs = [];
+    if (!sorted.length) return runs;
+    let s = sorted[0], p = sorted[0];
+    for (let i = 1; i < sorted.length; i++) {
+      if (dayDiff(p, sorted[i]) === 1) p = sorted[i];
+      else { runs.push([s, p]); s = sorted[i]; p = sorted[i]; }
+    }
+    runs.push([s, p]);
+    return runs;
+  }
+
+  // 스케줄 항목 → 캘린더 이벤트(막대) + 날짜별 멤버 목록(세부 패널용).
+  // 규칙:
+  //  - 막대는 '멤버 · 제목' 단위: 같은 멤버·같은 제목의 연속된 날은 하나의 막대로 잇는다(제목이 보인다).
+  //  - 빙하기: 연속된 '휴방' 구간에 '빙하기' 비고가 하나라도 있으면 그 구간 전체를 빙하기로 이어 붙인다
+  //    (비고가 일부 날에만 있어도 처음~끝까지 하나의 막대로).
+  //  - 일반 휴방(빙하기 아님)은 캘린더에서 제외.
+  //  - 세부 패널(dayMembers): 같은 날 같은 멤버는 한 줄로 묶고 제목을 합친다.
+  function buildCalEvents(items) {
+    // 1) 멤버별로 rest(휴방)·live 날짜를 모은다. live 는 '그 날의 제목들'을 모아 하나로 합친다.
+    const members = new Map(); // key -> { m, name, accent, rest:Map(date->hasIce), liveByDay:Map(date->titles[]) }
+    items.forEach((it) => {
+      if (/강지/.test(it.stellarName || '')) return;
+      const dk = (it.startDateTime || '').slice(0, 10);
+      if (!dk) return;
+      const m = scheduleMember(it);
+      const key = m ? m.key : (it.stellarName || '?');
+      if (!members.has(key)) members.set(key, { m, name: m ? I18N.memberName(m) : (it.stellarName || ''), accent: (m && m.accent) || '#8a7ffb', rest: new Map(), liveByDay: new Map() });
+      const rec = members.get(key);
+      if (isRest(it.title)) {
+        const hasIce = /빙하기/.test((it.remark || '') + ' ' + (it.title || ''));
+        rec.rest.set(dk, (rec.rest.get(dk) || false) || hasIce);
+      } else {
+        if (!rec.liveByDay.has(dk)) rec.liveByDay.set(dk, []);
+        if (it.title) rec.liveByDay.get(dk).push(it.title);
+      }
+    });
+
+    const events = [];
+    const dayMembers = new Map(); // date -> Map(key -> { m, name, accent, ice, titles[] })
+    let id = 0;
+    const markDay = (date, key, rec, patch) => {
+      if (!dayMembers.has(date)) dayMembers.set(date, new Map());
+      const dm = dayMembers.get(date);
+      if (!dm.has(key)) dm.set(key, { m: rec.m, name: rec.name, accent: rec.accent, ice: false, iceStart: '', iceEnd: '', titles: [] });
+      const e = dm.get(key);
+      if (patch.ice) e.ice = true;
+      if (patch.iceRange) { e.iceStart = patch.iceRange[0]; e.iceEnd = patch.iceRange[1]; }
+      if (patch.titles && patch.titles.length) e.titles.push(...patch.titles.filter((t) => t));
+    };
+
+    members.forEach((rec, key) => {
+      // 휴방 구간: 구간 안에 빙하기 비고가 하나라도 있으면 전체를 빙하기 막대로(기간 라벨 포함), 아니면 제외.
+      mergeDateRuns([...rec.rest.keys()]).forEach(([s, e]) => {
+        let iceRun = false;
+        rec.rest.forEach((hasIce, d) => { if (d >= s && d <= e && hasIce) iceRun = true; });
+        if (!iceRun) return; // 일반 휴방 구간 → 캘린더에서 제외
+        events.push({ id: 'e' + (id++), m: rec.m, name: rec.name, title: '빙하기', ice: true, accent: rec.accent, start: s, end: e });
+        rec.rest.forEach((_h, d) => { if (d >= s && d <= e) markDay(d, key, rec, { ice: true, iceRange: [s, e] }); });
+      });
+      // 방송 막대: '그 날 한 멤버의 제목들'을 ' + ' 로 합쳐 하루에 막대 하나로 묶는다(같은 스텔라 중복 제거).
+      // 연속으로 합친 제목이 같으면 하나의 막대로 이어붙인다.
+      const byCombined = new Map(); // combinedTitle -> Set(date)
+      rec.liveByDay.forEach((titles, d) => {
+        markDay(d, key, rec, { titles }); // 패널용(제목 합침은 렌더에서)
+        const str = titles.filter((t) => t).join(' + ');
+        if (!byCombined.has(str)) byCombined.set(str, new Set());
+        byCombined.get(str).add(d);
+      });
+      byCombined.forEach((dates, str) => {
+        mergeDateRuns([...dates]).forEach(([s, e]) => {
+          events.push({ id: 'e' + (id++), m: rec.m, name: rec.name, title: str, ice: false, accent: rec.accent, start: s, end: e });
+        });
+      });
+    });
+    return { events, dayMembers };
+  }
+  // 겹치는 이벤트를 세로 레인으로 분리(구간 스케줄링).
+  // 반드시 '시작일 오름차순'으로 처리해야 그리디가 정확하다(겹치지 않는데 아래로 밀려 위가 비는 현상 방지).
+  // 같은 날 시작이면 빙하기 먼저, 그다음 긴 것 먼저 → 빙하기/장기 일정이 위쪽 레인에 오게.
+  function assignLanes(events) {
+    const dur = (e) => dayDiff(e.start, e.end);
+    const sorted = [...events].sort((a, b) => {
+      if (a.start !== b.start) return a.start < b.start ? -1 : 1;
+      if (!!b.ice !== !!a.ice) return a.ice ? -1 : 1;
+      return dur(b) - dur(a);
+    });
+    const laneEnds = []; // 각 레인에 마지막으로 놓인 막대의 끝 날짜
+    sorted.forEach((ev) => {
+      let lane = 0;
+      while (lane < laneEnds.length && laneEnds[lane] >= ev.start) lane++;
+      ev.lane = lane;
+      laneEnds[lane] = ev.end;
+    });
+    return sorted;
+  }
+
+  function wireCalendar() {
+    $('#btnCalendar').addEventListener('click', openCalendar);
+    $('#closeCal').addEventListener('click', () => closeModalEl('#calModal'));
+    $('#calModal').addEventListener('click', (e) => { if (e.target.id === 'calModal') closeModalEl('#calModal'); });
+    $('#calPrev').addEventListener('click', () => calShift(-1));
+    $('#calNext').addEventListener('click', () => calShift(1));
+    // '+N' 클릭 → 그 날의 세부 일정을 오른쪽 패널에 연다(데이터 재요청 없이 리렌더).
+    $('#calGrid').addEventListener('click', (e) => {
+      const more = e.target.closest('.cal-more');
+      if (!more) return;
+      openDayDetail(more.dataset.day);
+    });
+    // 세부 패널의 닫기 버튼(매번 새로 그려지므로 위임).
+    $('#calDetail').addEventListener('click', (e) => { if (e.target.closest('#calDetailClose')) closeDayDetail(); });
+  }
+
   // 제목이 카드 폭보다 길면 양쪽 그라데이션 + 좌우 왕복(마퀴) 애니메이션
   // 번역으로 텍스트가 바뀐 뒤 다시 호출될 수 있으므로, 매번 이전 상태를 초기화하고 새로 측정한다(멱등).
   function applyMarquee(box) {
@@ -816,11 +1275,10 @@
     const over = text.scrollWidth - box.clientWidth;
     if (over > 4) {
       box.classList.add('marquee');
-      // 양끝 글자가 페이드에 가려지지 않도록 텍스트를 좌우로 FADE 만큼 들여쓰고, 그만큼 더 스크롤한다.
-      // → 시작 지점에선 첫 글자가 왼쪽 페이드 밖(안쪽)에, 끝 지점에선 마지막 글자가 오른쪽 페이드 밖에 놓인다.
-      text.style.paddingLeft = FADE + 'px';
+      // 왼쪽은 다른 제목과 같은 위치(패딩 0)에서 시작한다. 오른쪽 끝 글자만 오른쪽 페이드에
+      // 가리지 않도록 FADE 만큼 여유를 주고, 그만큼 더 스크롤해 끝까지 보이게 한다.
       text.style.paddingRight = FADE + 'px';
-      const shift = over + FADE * 2; // 패딩을 추가한 뒤의 실제 넘침폭(= 새 scrollWidth - clientWidth)
+      const shift = over + FADE; // 오른쪽 패딩을 더한 뒤의 실제 넘침폭(= 새 scrollWidth - clientWidth)
       box.style.setProperty('--shift', shift + 'px');
       box.style.setProperty('--dur', Math.max(2.5, shift / 22).toFixed(1) + 's');
     }
@@ -830,6 +1288,7 @@
   function fillSettings() {
     const s = state.settings;
     $('#setNotify').checked = s.notifyEnabled !== false;
+    $('#setNotifyOff').checked = s.notifyOffline !== false;
     $('#setAutoOpen').checked = !!s.autoOpenLive;
     $('#setThumbs').checked = s.showThumbnails !== false;
     $('#setTray').checked = s.minimizeToTray !== false;
@@ -925,6 +1384,7 @@
 
     const save = async (patch) => (state.settings = await api.setSettings(patch));
     $('#setNotify').addEventListener('change', (e) => save({ notifyEnabled: e.target.checked }));
+    $('#setNotifyOff').addEventListener('change', (e) => save({ notifyOffline: e.target.checked }));
     $('#btnTestNotify').addEventListener('click', async () => {
       let res;
       try { res = await api.testNotification(); } catch { res = null; }
@@ -1160,7 +1620,8 @@
 
   // ── 공용 모달 열기/닫기(애니메이션) ───────────
   function openModalEl(sel) { const m = $(sel); m.hidden = false; void m.offsetHeight; m.classList.add('open'); }
-  function closeModalEl(sel) { const m = $(sel); m.classList.remove('open'); setTimeout(() => (m.hidden = true), 240); }
+  // 캘린더는 아래로 슬라이드하는 시간(.36s)에 맞춰 조금 더 늦게 감춘다.
+  function closeModalEl(sel) { const m = $(sel); m.classList.remove('open'); setTimeout(() => (m.hidden = true), sel === '#calModal' ? 380 : 240); }
 
   // ── 문의하기(이메일 · GitHub 이슈 · X) ────────
   function wireContact() {
@@ -1357,6 +1818,9 @@
     setIcon('#closeChangelog', 'x', 14);
     setIcon('#closeTerms', 'x', 14);
     setIcon('#closeSched', 'x', 14);
+    setIcon('#closeCal', 'x', 14);
+    setIcon('#calPrev', 'chevronLeft', 20);
+    setIcon('#calNext', 'chevronRight', 20);
     // data-icon 속성이 있는 요소(설정 사이드바, 링크 등) 일괄 채우기
     document.querySelectorAll('[data-icon]').forEach((el) => (el.innerHTML = icon(el.dataset.icon, 16)));
   }
@@ -1379,6 +1843,7 @@
     wireChangelog();
     wireTerms();
     wireSchedDetail();
+    wireCalendar();
     wireWhatsNew();
 
     state.settings = await api.getSettings();

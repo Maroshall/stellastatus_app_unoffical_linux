@@ -11,6 +11,9 @@ const PROFILES = {
     accent: '#6D78E2',
     accent2: '#6D78E2',
     channelUrl: 'https://chzzk.naver.com/45e71a76e949e16a34764deb962f9d9f',
+    youtube: 'https://www.youtube.com/@ayatsunoyuni',
+    instagram: 'https://www.instagram.com/youneed_62',
+    x: 'https://x.com/AyatsunoYuni',
     cafe: 'https://cafe.naver.com/stellive',
   },
   'sakihane-huya': {
@@ -21,6 +24,8 @@ const PROFILES = {
     accent: '#59467C',
     accent2: '#59467C',
     channelUrl: 'https://chzzk.naver.com/36ddb9bb4f17593b60f1b63cec86611d',
+    youtube: 'https://www.youtube.com/@Sakihanechannel',
+    x: 'https://x.com/SakihaneHuya',
     cafe: 'https://cafe.naver.com/stellive',
   },
 
@@ -32,6 +37,9 @@ const PROFILES = {
     accent: '#EEDDC2',
     accent2: '#EEDDC2',
     channelUrl: 'https://chzzk.naver.com/b044e3a3b9259246bc92e863e7d3f3b8',
+    youtube: 'https://www.youtube.com/@shirayukihina',
+    instagram: 'https://www.instagram.com/shirayukihina_',
+    x: 'https://x.com/Shirayukihina_',
     cafe: 'https://cafe.naver.com/stellive',
   },
   'neneko-mashiro': {
@@ -41,6 +49,8 @@ const PROFILES = {
     accent: '#525054',
     accent2: '#525054',
     channelUrl: 'https://chzzk.naver.com/4515b179f86b67b4981e16190817c580',
+    youtube: 'https://www.youtube.com/@neneko_mashiro',
+    x: 'https://x.com/NenekoMashiro',
     cafe: 'https://cafe.naver.com/stellive',
   },
   'akane-lize': {
@@ -50,6 +60,8 @@ const PROFILES = {
     accent: '#8C2830',
     accent2: '#8C2830',
     channelUrl: 'https://chzzk.naver.com/4325b1d5bbc321fad3042306646e2e50',
+    youtube: 'https://www.youtube.com/@akanelize',
+    x: 'https://x.com/AkaneLize',
     cafe: 'https://cafe.naver.com/stellive',
   },
   'arahashi-tabi': {
@@ -59,6 +71,9 @@ const PROFILES = {
     accent: '#97C3E7',
     accent2: '#97C3E7',
     channelUrl: 'https://chzzk.naver.com/a6c4ddb09cdb160478996007bff35296',
+    youtube: 'https://www.youtube.com/@arahashitabi',
+    instagram: 'https://www.instagram.com/tabi_dayo3o',
+    x: 'https://x.com/Arahashitabi',
     cafe: 'https://cafe.naver.com/stellive',
   },
 
@@ -70,6 +85,8 @@ const PROFILES = {
     accent: '#BDA4E4',
     accent2: '#BDA4E4',
     channelUrl: 'https://chzzk.naver.com/64d76089fba26b180d9c9e48a32600d9',
+    youtube: 'https://www.youtube.com/@tenkoshibuki',
+    x: 'https://x.com/TenkoShibuki',
     cafe: 'https://cafe.naver.com/stellive',
   },
   'aokumo-rin': {
@@ -79,6 +96,8 @@ const PROFILES = {
     accent: '#3B64BA',
     accent2: '#3B64BA',
     channelUrl: 'https://chzzk.naver.com/516937b5f85cbf2249ce31b0ad046b0f',
+    youtube: 'https://www.youtube.com/@aokumorin',
+    x: 'https://x.com/AokumoRin',
     cafe: 'https://cafe.naver.com/stellive',
   },
   'hanako-nana': {
@@ -88,6 +107,8 @@ const PROFILES = {
     accent: '#D17C85',
     accent2: '#D17C85',
     channelUrl: 'https://chzzk.naver.com/4d812b586ff63f8a2946e64fa860bbf5',
+    youtube: 'https://www.youtube.com/@hanako_nana',
+    x: 'https://x.com/HanakoNana_',
     cafe: 'https://cafe.naver.com/stellive',
   },
   'yuzuha-riko': {
@@ -97,6 +118,8 @@ const PROFILES = {
     accent: '#AECEA9',
     accent2: '#AECEA9',
     channelUrl: 'https://chzzk.naver.com/8fd39bb8de623317de90654718638b10',
+    youtube: 'https://www.youtube.com/@yuzuhariko',
+    x: 'https://x.com/YuzuhaRiko',
     cafe: 'https://cafe.naver.com/stellive',
   },
 };
@@ -111,6 +134,9 @@ const DEFAULT_PROFILE = {
   nameEng: '',
   nameJa: '',
   nameJaKana: '',
+  youtube: null,
+  x: null,
+  instagram: null,
   accent: '#8a7ffb',
   accent2: '#b6a6ff',
   channelUrl: null,

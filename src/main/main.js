@@ -208,6 +208,23 @@ function notifyLive(member) {
   n.show();
 }
 
+// 방송 종료(방종) 알림 — 구독한 멤버가 라이브 → 오프라인으로 바뀌면 알린다.
+function notifyOffline(member) {
+  if (!store.get('notifyOffline')) return;
+  if (!isSubscribed(member.key)) return;
+  if (!Notification.isSupported()) return;
+
+  const n = new Notification({
+    title: i18n.t('notify.offTitle', { name: i18n.memberName(member) }),
+    body: i18n.t('notify.offBody'),
+    icon: notifyIcon(),
+    silent: false,
+  });
+  n.on('click', () => shell.openExternal(member.channelUrl || member.liveUrl || 'https://chzzk.naver.com'));
+  n.on('failed', (_e, err) => console.error('알림 표시 실패(off):', err));
+  n.show();
+}
+
 // ── 자동 업데이트 ─────────────────────────────────────────
 let lastNotifiedUpdate = null;
 
@@ -306,7 +323,27 @@ function registerIpc() {
 
   ipcMain.handle('schedule:today', async () => {
     try {
-      return await poller.client.schedule.getSchedulesByDate();
+      // 어제 00:00 ~ 오늘 23:59(KST)까지 받아온다. 어제 시작해 오늘까지 이어지는 방송을
+      // '오늘의 뱅온'에 반영할 수 있도록(실제 표시 여부는 렌더러가 라이브 여부로 판단).
+      const KST = 9 * 60 * 60 * 1000;
+      const now = new Date(Date.now() + KST); // UTC 필드 = KST 벽시계
+      const p = (n) => String(n).padStart(2, '0');
+      const dstr = (d) => `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`;
+      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      const yesterday = new Date(today.getTime() - 86400000);
+      return await poller.client.schedule.getSchedules({
+        after: `${dstr(yesterday)}T00:00:00`,
+        before: `${dstr(today)}T23:59:59`,
+        size: 1000,
+      });
+    } catch (e) {
+      return { error: String(e?.message || e) };
+    }
+  });
+  // 기간(캘린더 표시 범위) 스케줄 — after/before 는 ISO 문자열.
+  ipcMain.handle('schedule:range', async (_e, { after, before } = {}) => {
+    try {
+      return await poller.client.schedule.getSchedules({ after, before, size: 1000 });
     } catch (e) {
       return { error: String(e?.message || e) };
     }
@@ -405,11 +442,12 @@ app.whenReady().then(async () => {
       mainWindow.webContents.send('members:update', members);
     }
   });
-  poller.on('transitions', ({ wentLive }) => {
+  poller.on('transitions', ({ wentLive, wentOffline }) => {
     wentLive.forEach((m) => {
       notifyLive(m);
       maybeAutoOpen(m);
     });
+    (wentOffline || []).forEach((m) => notifyOffline(m));
     // 앱이 열려 있으면 인앱 플로팅 알림도 함께 표시
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('members:live', wentLive);

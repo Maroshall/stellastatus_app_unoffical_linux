@@ -17,6 +17,20 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 [hidden] { display: none !important; }
 html, body { height: 100%; overflow: hidden; }
+
+/* ── 스크롤바 통일 ─────────────────────────────
+   앱 전역의 모든 스크롤바를 하나의 모양으로 맞춘다(전역 규칙).
+   개별 스크롤 영역이 새로 생겨도 자동으로 같은 모양이 적용된다.
+   (드래그 전용 가로 스크롤 .h-scroll 과 설정 본문 .settings-main 은
+    아래쪽에서 더 구체적인 규칙으로 의도적으로 숨김 유지) */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.26); background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+/* 스크롤바 구석(코너)의 기본 하얀 상자 제거 */
+::-webkit-scrollbar-corner { background: transparent; }
+/* Firefox 계열도 얇은 스크롤바로 맞춘다(Electron 기본은 webkit이지만 안전하게 병기) */
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.14) transparent; }
 body {
   font-family: var(--font);
   color: var(--text);
@@ -133,10 +147,6 @@ body {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 26px), transparent 100%);
   mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 26px), transparent 100%);
 }
-.members::-webkit-scrollbar { width: 9px; }
-.members::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 8px; }
-.members::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.24); }
-.members::-webkit-scrollbar-track { background: transparent; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(238px, 1fr)); gap: 16px; align-content: start; }
 
 /* 가로 스크롤(스케줄 전용) */
@@ -190,22 +200,31 @@ body {
 
 /* 프로필 아바타(소셜 팝아웃 트리거) */
 .ava-wrap { position: relative; flex-shrink: 0; display: inline-flex; border-radius: 50%; }
-.member-head.has-social .ava-wrap { cursor: pointer; }
-.ava-more { position: absolute; right: -2px; bottom: -2px; width: 16px; height: 16px; border-radius: 50%; background: var(--card-accent); color: var(--card-ink, #1c1720); display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
-.member-head.has-social .ava-more { display: flex; }
-.member-head.has-social:hover .ava-more { opacity: .9; }
-.member-head.social-open .ava-more { opacity: 0; }
+.ava-wrap.clickable { cursor: pointer; }
+.ava-wrap.clickable:hover .avatar { filter: brightness(1.08); }
 
 /* 이름 영역: 팝아웃 열리면 블러 처리 */
 .m-names { min-width: 0; flex: 1; transition: filter .2s, opacity .2s; }
-.member-head.social-open .m-names { filter: blur(4px); opacity: .3; pointer-events: none; }
+.member-head.social-open .m-names { filter: blur(4px); opacity: .25; pointer-events: none; }
 
-/* 소셜 아이콘: 아바타 오른쪽에서 튀어나오듯 슬라이드 */
-.social-icons { position: absolute; left: 52px; top: 50%; display: flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transform: translate(-10px, -50%); transition: opacity .2s, transform .2s; }
-.member-head.social-open .social-icons { opacity: 1; pointer-events: auto; transform: translate(0, -50%); }
-.social-ico { -webkit-app-region: no-drag; width: 32px; height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--panel-brd); background: rgba(255,255,255,.06); color: var(--text-dim); cursor: pointer; transition: transform .18s, background .15s, color .15s; transition-delay: calc(var(--i, 0) * 40ms); }
-.member-head.social-open .social-ico { transform: translateX(0); }
-.social-ico:hover { background: var(--card-accent); color: var(--card-ink, #1c1720); transform: translateY(-2px); }
+/* 소셜 아이콘: 아바타 오른쪽에 겹쳐, 클릭 시 하나씩 차례로(스태거) 튀어나온다. */
+.social-icons { position: absolute; left: 52px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 8px; pointer-events: none; }
+.member-head.social-open .social-icons { pointer-events: auto; }
+/* transition-delay 는 (opacity, transform, background) 순서로 지정한다. background(hover)는 항상 0s. */
+.social-ico { -webkit-app-region: no-drag; width: 32px; height: 32px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--panel-brd); background: rgba(255,255,255,.06); cursor: pointer; opacity: 0; transform: translateX(-12px) scale(.75);
+  transition: opacity .2s ease, transform .2s ease, background .15s ease;
+  /* 닫힐 때: 오른쪽(마지막) 버튼부터 역순으로 사라진다. */
+  transition-delay: calc((var(--n, 3) - 1 - var(--i, 0)) * 60ms), calc((var(--n, 3) - 1 - var(--i, 0)) * 60ms), 0s; }
+/* 열릴 때: 첫 버튼부터 차례로 나타난다(정순 스태거). */
+.member-head.social-open .social-ico { opacity: 1; transform: translateX(0) scale(1);
+  transition-delay: calc(var(--i, 0) * 75ms), calc(var(--i, 0) * 75ms), 0s; }
+.social-ico:hover { background: rgba(255,255,255,.16); transform: translateY(-2px) scale(1.06); }
+.social-ico svg { display: block; }
+/* 브랜드 색(CI/BI). 다크 배경이라 X 는 흰색으로 표기. */
+.social-ico.s-chzzk { color: #00FFA3; }
+.social-ico.s-youtube { color: #FF0000; }
+.social-ico.s-x { color: #f2ecff; }
+.social-ico.s-instagram { color: #E1306C; }
 .avatar.star-mark { padding: 9px; }
 .m-names { min-width: 0; flex: 1; }
 .m-name { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
@@ -234,10 +253,21 @@ body {
 .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .section-head h2 { font-size: 15px; font-weight: 700; }
 .section-head .src { font-size: 11.5px; color: var(--text-mute); font-weight: 400; }
-.sched-strip { height: auto; padding-bottom: 4px; }
+/* 컨테이너 gap 대신 카드별 margin 을 써서, 추가/제거 시 폭까지 부드럽게 접히게 한다. */
+.sched-strip { height: auto; padding-bottom: 4px; gap: 0; }
 /* 모든 뱅온 카드는 동일한 크기 */
-.sched-card { flex: 0 0 auto; width: 182px; height: 82px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; overflow: hidden;
-  background: var(--panel); border: 1px solid var(--panel-brd); border-radius: 12px; padding: 11px 14px; transition: opacity .15s; }
+.sched-card { flex: 0 0 auto; width: 182px; max-width: 182px; height: 82px; margin-right: 12px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; overflow: hidden;
+  background: var(--panel); border: 1px solid var(--panel-brd); border-radius: 12px; padding: 11px 14px;
+  transition: max-width .3s cubic-bezier(.2,.8,.25,1), margin-right .3s cubic-bezier(.2,.8,.25,1), padding .3s ease, opacity .22s ease, transform .3s cubic-bezier(.2,.8,.25,1); }
+/* 제거 시: 폭·여백이 0으로 접히며 사라짐(transition) — JS 가 setTimeout 으로 확실히 제거 */
+.sched-card.sched-collapsed { max-width: 0; margin-right: 0; padding-left: 0; padding-right: 0; opacity: 0; transform: scale(.94); }
+/* 추가 시: 키프레임 애니메이션(삽입되면 스스로 재생 → rAF 스로틀/백그라운드 탭에서도 안전) */
+@keyframes sched-enter {
+  from { max-width: 0; margin-right: 0; padding-left: 0; padding-right: 0; opacity: 0; transform: scale(.94); }
+  60% { opacity: 1; }
+  to { max-width: 182px; margin-right: 12px; padding-left: 14px; padding-right: 14px; opacity: 1; transform: none; }
+}
+.sched-card.sched-entering { animation: sched-enter .32s cubic-bezier(.2,.8,.25,1); }
 .sched-card.past { opacity: .45; }
 .sched-card.past .sched-time { color: var(--text-mute); }
 .sched-time-row { display: flex; align-items: center; gap: 6px; }
@@ -257,8 +287,11 @@ body {
 .sched-title { font-size: 11.5px; color: var(--text-dim); overflow: hidden; }
 .sched-title .stt { display: inline-block; white-space: nowrap; max-width: 100%; }
 .sched-title:not(.marquee) .stt { overflow: hidden; text-overflow: ellipsis; }
-/* 제목이 길면 양쪽 그라데이션 + 좌우 왕복 */
-.sched-title.marquee { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%); mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%); }
+/* 제목이 길면 스크롤(마퀴). 정지 상태에선 오른쪽만 페이드해 왼쪽을 다른 제목/이름과 같은 위치에서 시작하게 한다
+   (예전엔 왼쪽도 페이드 + 왼쪽 패딩이라, 넘치는 제목만 왼쪽 여백이 커 보였다).
+   마우스를 올려 스크롤할 때만 양끝을 페이드해 좌우 끝이 부드럽게 사라지게 한다. */
+.sched-title.marquee { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 12px), transparent 100%); mask-image: linear-gradient(to right, #000 calc(100% - 12px), transparent 100%); }
+.sched-card:hover .sched-title.marquee { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%); mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%); }
 .sched-title.marquee .stt { animation: sched-marquee var(--dur, 5s) ease-in-out infinite alternate; animation-play-state: paused; }
 .sched-card:hover .sched-title.marquee .stt { animation-play-state: running; }
 @keyframes sched-marquee { from { transform: translateX(0); } to { transform: translateX(calc(-1 * var(--shift, 0px))); } }
@@ -266,6 +299,103 @@ body {
 .sched-card.noinfo { opacity: .5; }
 .sched-time.noinfo { color: var(--text-mute); font-weight: 600; }
 .sd-status.noinfo { background: rgba(255,255,255,.06); color: var(--text-mute); }
+
+/* 뱅온 캘린더 버튼 */
+.section-head { display: flex; align-items: center; justify-content: space-between; }
+.cal-btn { -webkit-app-region: no-drag; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--panel-brd); background: rgba(255,255,255,.05); color: var(--text-dim); }
+.cal-btn:hover { background: rgba(255,255,255,.1); color: var(--text); }
+
+/* 캘린더 모달 — 세로 flex 컬럼(헤더 고정 + 본문이 남는 높이 채움). 모달 자체는 스크롤하지 않고
+   스크롤은 안쪽(달력 그리드 / 오른쪽 세부 리스트)에서만 일어난다. */
+/* .modal(뒤에 정의됨)의 width:460px 를 이기도록 특이도를 높인다(.modal.cal-modal). */
+/* 높이를 '고정'해 패널 열기/월 이동 시 모달이 리사이즈(→ 상하로 밀림)되지 않게 한다.
+   달력 6주가 스크롤 없이 다 들어가도록 충분히 크게(넘치는 짧은 창에서만 안쪽 그리드가 스크롤). */
+/* 캘린더는 팝업이 아니라 타이틀바 아래 영역을 꽉 채운다(전체 화면). */
+.modal.cal-modal { width: 100%; max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; overflow: hidden; padding: 16px 30px 20px; position: relative; display: flex; flex-direction: column; }
+/* 전체 화면 캘린더는 아래에서 위로 슬라이드하며 등장한다(닫힐 땐 아래로). */
+.modal-backdrop .modal.cal-modal { transform: translateY(100%); opacity: 1; transition: transform .36s cubic-bezier(.16,.84,.3,1); }
+.modal-backdrop.open .modal.cal-modal { transform: translateY(0); opacity: 1; }
+.cal-head { flex: 0 0 auto; }
+.cal-close { position: absolute; top: 12px; right: 12px; }
+.cal-head { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 18px; }
+.cal-title { font-size: 20px; font-weight: 800; letter-spacing: .2px; min-width: 168px; text-align: center; }
+.cal-nav { -webkit-app-region: no-drag; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; background: transparent; color: var(--text-dim); transition: background .15s, color .15s, border-color .15s; }
+.cal-nav:hover { background: rgba(255,255,255,.07); border-color: var(--panel-brd); color: var(--text); }
+.cal-nav:active { transform: scale(.94); }
+.cal-weekdays { flex: 0 0 auto; display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 0; padding: 0 1px; }
+.cal-wd { text-align: center; font-size: 11px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; color: var(--text-mute); padding: 0 0 8px; }
+.cal-wd.sun { color: #e58a97; }
+/* 그리드: 바깥 테두리 + 카드 배경으로 감싸 하나의 판처럼 보이게.
+   본문 높이를 flex 로 채우고(로딩 스피너도 꽉 찬 판 안에서 중앙 → 높이 점프 없음),
+   내용이 넘치면 '이 그리드'만 세로로 스크롤(모달 전체가 스크롤되지 않게). */
+.cal-grid { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--panel-brd); border-radius: 14px; overflow-y: auto; overflow-x: hidden; background: color-mix(in srgb, var(--panel-2) 55%, transparent); }
+.cal-loading { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; padding: 0; }
+/* 각 주는 그리드 높이를 균등하게 나눠 채운다(flex-basis:0 + grow).
+   → 일정이 적은 달도 아래 빈칸 없이 꽉 차고(급하게 잘린 느낌 제거), 6주가 스크롤 없이 들어간다.
+   inline min-height 는 '그 주의 최소 높이(막대 수)' 로 붐비는 주가 찌그러지지 않게 바닥을 잡아준다. */
+.cal-week { flex: 1 1 0; position: relative; display: grid; grid-template-columns: repeat(7, 1fr); }
+.cal-week + .cal-week { border-top: 1px solid var(--panel-brd); }
+.cal-day { padding: 5px 0 0; text-align: center; transition: background .12s; }
+.cal-day + .cal-day { border-left: 1px solid color-mix(in srgb, var(--panel-brd) 60%, transparent); }
+.cal-day:first-child { background: color-mix(in srgb, #e58a97 6%, transparent); } /* 일요일 열 은은한 톤 */
+.cal-day:hover { background: rgba(255,255,255,.035); }
+.cal-day.out { background: color-mix(in srgb, var(--bg) 40%, transparent); }
+.cal-day.out:first-child { background: color-mix(in srgb, #e58a97 3%, transparent); }
+.cal-dnum { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; font-size: 12px; font-weight: 600; color: var(--text); }
+.cal-day.out .cal-dnum { color: var(--text-mute); opacity: .55; }
+.cal-day.today .cal-dnum { background: var(--accent); color: #1c1720; font-weight: 800; border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+/* 이벤트 막대 (연속 날짜는 하나로 이어짐) */
+.cal-bar { position: absolute; height: 14px; box-sizing: border-box; overflow: hidden; border-radius: 4px; background: color-mix(in srgb, var(--bar, #8a7ffb) 92%, transparent); display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+.cal-bar-t { line-height: 14px; }
+/* 이어지는 막대: 연결 지점 모서리를 각지게 해 하나로 이어져 보이게 */
+.cal-bar:not(.s) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.cal-bar:not(.e) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.cal-bar-t { font-size: 10.5px; font-weight: 700; white-space: nowrap; padding: 0 8px; overflow: hidden; text-overflow: ellipsis; }
+/* 빙하기 휴방: 서리 낀 듯한 아이스 톤 + 점선 테두리로 일반 방송과 구분 */
+.cal-bar.ice { background: linear-gradient(135deg, #c7e5f6 0%, #a6d1ea 100%); border: 1px dashed rgba(255,255,255,.7); color: #21506e; text-shadow: none; box-shadow: 0 1px 2px rgba(0,0,0,.14); }
+/* 여러 주에 걸친 빙하기 막대는 이어지는 가장자리 테두리를 없애 연속돼 보이게 한다 */
+.cal-bar.ice:not(.s) { border-left: none; }
+.cal-bar.ice:not(.e) { border-right: none; }
+/* 한 주에 막대가 넘칠 때의 '+N 더보기' 칩 — 누르면 그 날 세부 패널을 연다 */
+.cal-more { position: absolute; height: 16px; box-sizing: border-box; display: flex; align-items: center; padding: 0 7px; font-size: 10.5px; font-weight: 700; color: var(--text-dim); background: rgba(255,255,255,.06); border-radius: 4px; cursor: pointer; transition: background .12s, color .12s; overflow: hidden; white-space: nowrap; }
+.cal-more:hover { background: rgba(255,255,255,.13); color: var(--text); }
+
+/* 캘린더 본문: 왼쪽 달력 + 오른쪽 세부 패널. 본문이 모달의 남은 높이를 전부 차지한다. */
+.cal-body { flex: 1 1 auto; min-height: 0; display: flex; gap: 0; align-items: stretch; }
+.cal-left { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.cal-day.sel { background: color-mix(in srgb, var(--accent) 15%, transparent) !important; box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent); }
+
+/* 오른쪽 세부 일정 패널
+   .cal-detail 는 '클립 컨테이너' — flex-basis 를 0↔316px 로 트랜지션해 달력을 부드럽게 밀어낸다.
+   실제 내용은 폭 고정(.cd-inner)이라 애니메이션 중 글자가 리플로우되지 않는다(자연스러운 reveal). */
+.cal-detail { flex: 0 0 0px; overflow: hidden; opacity: 0; transition: flex-basis .26s cubic-bezier(.2,.8,.25,1), opacity .2s ease; }
+.cal-detail.open { flex-basis: 316px; opacity: 1; }
+.cd-inner { width: 300px; margin-left: 16px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; background: var(--panel-2); border: 1px solid var(--panel-brd); border-radius: 14px; padding: 16px 16px 18px; }
+.cd-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.cd-date { font-size: 16px; font-weight: 800; }
+.cd-dow { font-size: 13px; font-weight: 700; color: var(--text-mute); margin-left: 2px; }
+.cd-dow.sun { color: #e58a97; }
+.cd-close { -webkit-app-region: no-drag; cursor: pointer; width: 28px; height: 28px; border-radius: 8px; border: none; background: transparent; color: var(--text-mute); font-size: 14px; display: inline-flex; align-items: center; justify-content: center; transition: background .12s, color .12s; }
+.cd-close:hover { background: rgba(255,255,255,.08); color: var(--text); }
+.cd-count { font-size: 12px; color: var(--text-mute); margin-bottom: 12px; }
+/* gap 대신 항목별 margin → 제거 시 세로 공간까지 부드럽게 접힌다.
+   overflow-x:hidden 을 명시 — overflow-y 만 auto 로 두면 브라우저가 overflow-x 도 auto 로 계산해
+   가로 스크롤/구석(코너)의 하얀 상자가 생긴다. */
+.cd-list { flex: 1 1 auto; display: flex; flex-direction: column; gap: 0; overflow-y: auto; overflow-x: hidden; min-height: 0; }
+.cd-item { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 5px; padding: 6px 10px; border-radius: 9px; background: rgba(255,255,255,.035); border: 1px solid var(--panel-brd); box-sizing: border-box;
+  transition: max-height .28s ease, opacity .22s ease, transform .26s cubic-bezier(.2,.8,.25,1), margin .28s ease, padding .28s ease; }
+.cd-item.ice { background: color-mix(in srgb, #bfe0f2 12%, transparent); border-color: color-mix(in srgb, #bfe0f2 40%, transparent); }
+/* 등장: 오른쪽에서 살짝 밀려들며 페이드(항목마다 delay 로 차례차례) */
+@keyframes cd-item-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+.cd-item.cd-entering { animation: cd-item-in .3s cubic-bezier(.2,.8,.25,1) both; }
+/* 제거: 페이드 + 세로로 접힘(max-height 는 JS 가 현재 높이→0 으로 설정). 대각선 이동 없이 깔끔하게. */
+.cd-item.cd-leaving { opacity: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; overflow: hidden; }
+.cd-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; }
+.cd-txt { min-width: 0; }
+.cd-name { font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 제목은 최대 2줄로 제한(긴 제목이 패널을 넘쳐 스크롤을 만드는 것 방지) */
+.cd-title { font-size: 11.5px; color: var(--text-dim); margin-top: 1px; line-height: 1.3; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cd-empty { color: var(--text-mute); font-size: 13px; padding: 20px 4px; text-align: center; }
 
 /* 이번 버전에서 바뀐 점 모달 */
 .wn-modal { width: min(460px, calc(100vw - 48px)); padding: 22px; }
@@ -343,8 +473,6 @@ body {
 .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--panel-brd); }
 .modal-head h2 { font-size: 16px; }
 .modal-body { padding: 8px 20px 16px; overflow-y: auto; }
-.modal-body::-webkit-scrollbar { width: 8px; }
-.modal-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 8px; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
 .setting-block { padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
 .s-title { font-size: 13.5px; font-weight: 600; }
@@ -385,8 +513,6 @@ select option { background: var(--panel-2); color: var(--text); }
   margin-top: 16px; max-height: 230px; overflow-y: auto; background: var(--bg); border: 1px solid var(--panel-brd);
   border-radius: 12px; padding: 14px 16px; font-size: 12.5px; color: var(--text-dim); line-height: 1.6;
 }
-.um-notes::-webkit-scrollbar { width: 8px; }
-.um-notes::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 8px; }
 .um-progress { margin-top: 14px; }
 .um-bar { height: 7px; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
 .um-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-ink)); border-radius: 999px; transition: width .2s ease; }
@@ -415,8 +541,6 @@ select option { background: var(--panel-2); color: var(--text); }
 .changelog-modal { width: 480px; max-width: calc(100vw - 40px); max-height: calc(100vh - 100px); display: flex; flex-direction: column; padding: 20px 22px; position: relative; }
 .cl-head h2 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
 .cl-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
-.cl-list::-webkit-scrollbar { width: 8px; }
-.cl-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 8px; }
 .cl-item { border: 1px solid var(--panel-brd); border-radius: 12px; padding: 14px 16px; background: rgba(255,255,255,.02);
   animation: cl-fade .3s ease both; }
 @keyframes cl-fade { from { opacity: 0; } to { opacity: 1; } }
