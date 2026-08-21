@@ -39,7 +39,6 @@ contextBridge.exposeInMainWorld('stella', {
   getChangelog: () => ipcRenderer.invoke('app:changelog'),
   getDiagnostics: () => ipcRenderer.invoke('app:diagnostics'),
   copyToClipboard: (text) => ipcRenderer.invoke('clipboard:write', text),
-  uninstall: () => ipcRenderer.invoke('app:uninstall'),
   checkUpdate: () => ipcRenderer.invoke('update:check'),
   installUpdate: () => ipcRenderer.invoke('update:install'),
   onUpdateStatus: (cb) => sub('update:status', cb),

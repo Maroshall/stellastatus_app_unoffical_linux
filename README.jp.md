@@ -1,106 +1,77 @@
 # StellaStatus
 
-[한국어](README.md) | [English](README.en.md) | **日本語**
+**[한국어](README.md)** | [English](README.en.md) | 日本語
 
-ステラライブ（StelLive）メンバーのCHZZK配信状態を確認し、配信が始まるとWindows通知でお知らせするデスクトップアプリです。
+StellaLive メンバーのCHZZK配信状態を確認し、配信開始時にデスクトップ通知を表示するLinux向け非公式フォークです。
 
-このアプリはステラライブが提供する公式サービスではなく、ファンが運営する非公式サービスです。
+> このリポジトリは元プロジェクトのフォークです。  
+> 元プロジェクト: https://github.com/tabiluv/stellastatus_app  
+> Linux環境で使用できるようAppImageビルドとLinux対応を追加しています。Linux固有の変更を除き、元プロジェクトの機能とMITライセンスを引き継いでいます。
 
-配信状態はCHZZK、配信スケジュール（バンオン）はStelLightのデータを使用しており、
-[`stellastatus`](https://www.npmjs.com/package/stellastatus) ライブラリとElectronで作られています。
-
-> 📌 正式版とベータ版の違い、ベータ版の受け取り方は **[バージョン案内](VERSIONING.md)**（韓国語）を参照してください。
+StellaLive公式サービスではなく、ファンによる非公式プロジェクトです。
 
 ## 機能
 
-- 全メンバーのCHZZK配信状態を定期的にチェック
-- 購読中のメンバーの配信が始まるとWindows通知（クリックでライブへ移動）
-- 配信開始時に既定のブラウザで自動的に開く（任意）
-- メンバーごとのプロフィール、ライブのタイトル・カテゴリ・視聴者数、サムネイルの表示
-- 本日のバンオン（StelLightのデータに基づく）の表示
-- タスクトレイ常駐、Windows起動時の自動実行オプション
-- GitHubリリースを通じた自己アップデート
+- CHZZK配信状態の定期確認
+- 登録メンバーの配信開始時のデスクトップ通知
+- 配信開始時のブラウザ自動起動（任意）
+- メンバープロフィール、配信タイトル・カテゴリ・視聴者数・サムネイル表示
+- StelLightのデータを利用した本日の配信予定表示
+- システムトレイ、ログイン時の自動起動
+- GitHub ReleasesによるLinux AppImageの更新確認・ダウンロード
 
-## 開発 / 実行
+## Linux対応
 
-Node.js 18以上が必要です。
+現在の配布対象:
+
+- Linux x86_64 (x64)
+- AppImage
+
+## インストール
+
+GitHub Releasesから`.AppImage`をダウンロードし、以下を実行してください。
 
 ```bash
-npm install
+chmod +x StellaStatus-*.AppImage
+./StellaStatus-*.AppImage
+```
+
+## 開発
+
+Node.js 24以降を推奨します。
+
+```bash
+npm ci
 npm run gen-icon
 npm run gen-logos
 npm start
 ```
 
-開発者ツールも一緒に開く場合は `npm run dev` を実行します。
-
-## インストーラーのビルド
-
-カスタムインストーラー（`스텔라상태 Setup.exe`）を一度にビルドします。
+## ビルド
 
 ```bash
-npm run build-setup
+npm ci
+npm run gen-icon
+npm run gen-logos
+npm run dist
 ```
 
-ビルドはメインアプリのパッケージング → インストーラーへのアプリ本体の同梱 → 単一実行ファイルの生成という流れで進み、
-成果物は `dist-installer/스텔라상태 Setup.exe` の1ファイルのみです。Electronとアプリの両方が含まれているため、
-このファイルさえあればインストールできます。
+AppImageは`dist/`に生成されます。
 
-インストーラーはフレームレスのダークUI（利用規約、インストール先の選択、進行状況、完了）で動作し、
-デスクトップ・スタートメニューのショートカットと、コントロールパネルのアンインストール項目を登録します。
-アプリ内の設定からアンインストールすることもできます。
+## リリース
 
-> ビルド中に `winCodeSign` の展開がシンボリックリンクの権限不足で失敗する場合は、
-> Windowsの「設定 > プライバシーとセキュリティ > 開発者向け > 開発者モード」をオンにしてから再度ビルドしてください。
-
-## インストールとSmartScreenについて
-
-`스텔라상태 Setup.exe` を実行するだけです。
-
-コード署名が行われていないため、初回実行時にSmartScreenの警告が表示されることがあります。
-青い画面で「詳細情報」をクリックし、「実行」を押してください。ブラウザでのダウンロード時に警告が出た場合は、
-ダウンロード項目から「保存」（保持）を選択してください。
-
-## 配布 (GitHub Releases)
-
-配布ファイルは `스텔라상태 Setup.exe` の1つだけです。独自のアップデーターがGitHub Releases APIで
-最新リリースを確認するため、別途メタデータファイルは必要ありません。
-
-リポジトリにコードをプッシュしたあと、バージョンタグをプッシュすると、GitHub ActionsがWindows上で
-インストーラーをビルドし、リリースにアップロードします。
+`v*`タグをpushすると、GitHub ActionsがLinux AppImageをビルドしてGitHub Releaseへアップロードします。
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.7
+git push origin v1.0.7
 ```
-
-自動配布を利用するには、リポジトリの Settings > Actions > General > Workflow permissions で
-「Read and write permissions」を有効にする必要があります。
-
-手動でアップロードする場合は、`npm run build-setup` で作成した `dist-installer/스텔라상태 Setup.exe` を
-リリースに添付してください。
-
-新しいバージョンを出す際は、`package.json` の `version` を上げてから `v1.0.x` タグをプッシュします。
-既存ユーザーのアプリは起動時（および6時間ごと）に新しいリリースを確認し、インストールを押すと
-新しいインストーラーでアップデートされます。
-
-## データの出典
-
-- 配信状態: CHZZKの内部API。公式ドキュメントのないエンドポイントのため、レスポンス構造の変更や
-  ブロックが発生する可能性があり、個人・非商用での利用を前提としています。
-- 配信スケジュール: ファン制作サービスStelLightの公開APIを使用しています。サーバー負荷を抑えるため、
-  チェック間隔は最短30秒に制限されています。
-
-## プライバシーポリシー (Privacy policy)
-
-- このアプリはユーザーの個人情報を収集したり、外部に送信したりすることはありません。
-- アプリは以下のサービスに対してのみネットワークリクエストを行います。
-  - **CHZZK（치지직）** — 配信状態の取得
-  - **StelLight** — 配信スケジュール（バンオン）の取得
-  - **GitHub** — アップデートの確認とダウンロード
-- 通知の購読リストやチェック間隔など、**すべての設定はユーザーのPC（ローカル）にのみ保存**され、外部に送信されることはありません。
-- ユーザーが要求していない情報を、いかなる外部サーバーにも送信しません。
 
 ## ライセンス
 
-MIT
+MIT License。
+
+元プロジェクト: https://github.com/tabiluv/stellastatus_app  
+Linuxフォーク: https://github.com/Maroshall/stellastatus_app
+
+詳細は`LICENSE`をご確認ください。

@@ -4,7 +4,7 @@
   "desktopName": "StellaStatus",
   "version": "1.0.6",
   "fullVersion": "1.0.6",
-  "description": "스텔라이브 멤버의 치지직 방송 상태를 확인하고 데스크톱 알림을 보내주는 데스크톱 앱",
+  "description": "스텔라이브 멤버의 치지직 방송 상태를 확인하고 데스크톱 알림을 보내주는 Linux용 비공식 포크",
   "author": {
     "name": "StellaStatus",
     "email": "tabi.luv@icloud.com"
@@ -16,12 +16,9 @@
     "dev": "electron . --dev",
     "gen-icon": "node scripts/gen-icon.mjs",
     "gen-logos": "node scripts/normalize-logos.mjs",
-    "gen-art": "node scripts/gen-installer-art.mjs",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder",
-    "dist-mac": "node scripts/build-mac.mjs",
-    "build-setup": "node scripts/build-setup.mjs",
-    "release": "electron-builder --publish always"
+    "dist": "electron-builder --linux AppImage",
+    "release": "electron-builder --linux AppImage --publish never"
   },
   "dependencies": {
     "electron-store": "^8.2.0",
@@ -33,6 +30,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tabiluv/stellastatus_app.git"
+    "url": "git+https://github.com/Maroshall/stellastatus_app.git"
   }
 }

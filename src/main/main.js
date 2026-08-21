@@ -25,7 +25,6 @@ let PKG_FULL_VERSION = '';
 try { PKG_FULL_VERSION = require('../../package.json').fullVersion || ''; } catch { /* ignore */ }
 function appVersion() { return PKG_FULL_VERSION || app.getVersion(); }
 
-const APP_ID = 'com.stellastatus.app';
 const ICON_PATH = path.join(app.getAppPath(), 'build', 'icon.png');
 const isDev = process.argv.includes('--dev') || !app.isPackaged;
 
@@ -34,8 +33,6 @@ let tray = null;
 let isQuitting = false;
 const poller = new Poller();
 
-// 윈도우 알림에 앱 이름이 제대로 표시되도록 AppUserModelID 설정
-app.setAppUserModelId(APP_ID);
 
 // GPU 셰이더 디스크 캐시가 잠겨(백신 실시간 검사/중복 실행 등) 이동에 실패하면
 // "Unable to move the cache (0x5)" / "Gpu Cache Creation failed" 로그가 뜬다(동작엔 무해).
@@ -394,27 +391,6 @@ function registerIpc() {
   // 막히는 경우가 있어, 안전하게 메인 프로세스의 Electron clipboard 로 복사한다.
   ipcMain.handle('clipboard:write', (_e, text) => { clipboard.writeText(String(text ?? '')); return true; });
 
-  // 앱 제거 — 설치 폴더의 제거 프로그램 실행
-  ipcMain.handle('app:uninstall', async () => {
-    const uninstaller = path.join(path.dirname(process.execPath), '스텔라상태 제거.exe');
-    if (isDev || !fs.existsSync(uninstaller)) {
-      await dialog.showMessageBox(mainWindow, {
-        type: 'info', title: '제거', message: '제거 프로그램을 찾을 수 없습니다.',
-        detail: '정식 설치본에서만 제거할 수 있습니다.',
-      });
-      return;
-    }
-    const r = await dialog.showMessageBox(mainWindow, {
-      type: 'warning', buttons: ['제거', '취소'], defaultId: 1, cancelId: 1,
-      title: '스텔라상태 제거', message: '스텔라상태를 제거할까요?',
-      detail: '설치된 파일과 바로가기가 삭제됩니다.',
-    });
-    if (r.response === 0) {
-      spawn(uninstaller, ['--uninstall'], { detached: true, stdio: 'ignore' }).unref();
-      isQuitting = true;
-      app.quit();
-    }
-  });
 
   // 커스텀 타이틀바 창 제어
   ipcMain.on('window:minimize', () => mainWindow?.minimize());

@@ -1,7 +1,7 @@
 // Linux용 자체 업데이터
 // GitHub Releases에서 새 AppImage를 확인하고 다운로드한다.
 //
-// Linux에서는 Windows의 Setup.exe 같은 설치 프로그램을 사용하지 않는다.
+// Linux에서는 별도의 설치 프로그램을 사용하지 않는다.
 // 새 AppImage를 다운로드한 뒤 사용자가 새 파일을 실행할 수 있도록
 // 다운로드 위치를 열어준다.
 //

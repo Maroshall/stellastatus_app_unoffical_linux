@@ -1412,7 +1412,6 @@
     $('#btnCheckUpdate').addEventListener('click', () => { state.manualUpdateCheck = true; api.checkUpdate(); });
     $('#btnReport').addEventListener('click', () => openModalEl('#contactModal'));
     $('#btnCopyDiag').addEventListener('click', copyDiagnostics);
-    $('#btnUninstall').addEventListener('click', () => api.uninstall());
   }
 
   // 진단 정보(버그 신고용)를 사람이 읽기 좋은 형태로 만들어 화면에 보여주고 클립보드로 복사한다.
