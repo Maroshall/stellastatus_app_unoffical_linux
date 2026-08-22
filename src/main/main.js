@@ -1,6 +1,5 @@
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
 const {
   app,
   BrowserWindow,
@@ -95,9 +94,10 @@ function createWindow() {
   mainWindow.on('resize', saveBounds);
   mainWindow.on('move', saveBounds);
 
-  // 닫기 → 트레이로 최소화(설정에 따라)
+  // Linux에서는 X를 눌러도 앱을 종료하지 않고 트레이로 숨긴다.
+  // 완전 종료는 트레이 메뉴의 '종료'를 사용한다.
   mainWindow.on('close', (e) => {
-    if (!isQuitting && store.get('minimizeToTray')) {
+    if (!isQuitting) {
       e.preventDefault();
       mainWindow.hide();
     }
@@ -288,8 +288,7 @@ function registerIpc() {
   // 버튼을 눌렀는데도 알림이 안 보이면 앱이 아니라 OS(알림 권한/집중모드) 쪽 문제임을 알 수 있다.
   ipcMain.handle('notify:test', () => {
     if (!Notification.isSupported()) return { ok: false, reason: 'unsupported' };
-    // show() 직후 바로 반환하면 macOS 의 비동기 'failed'(예: 알림 권한 꺼짐 → UNErrorDomain 오류 1)를
-    // 놓쳐 UI 가 '보냈어요'로 오인한다. show/failed 이벤트를 잠깐 기다렸다가 실제 결과를 돌려준다.
+    // show/failed 이벤트를 잠깐 기다렸다가 실제 결과를 반환한다.
     return new Promise((resolve) => {
       let settled = false;
       const finish = (r) => { if (!settled) { settled = true; resolve(r); } };
@@ -365,9 +364,8 @@ function registerIpc() {
     }
     updater.check({ manual: true });
   });
-  // [설치하기] — 일반 업데이트는 이때 비로소 다운로드하고, 복사/설치는 인스톨러에 넘긴다.
-  // (isQuitting 은 실제 설치 실행 시 app.quit → before-quit 에서 설정된다.
-  //  다운로드가 실패해 설치로 넘어가지 않으면 앱은 계속 트레이에 상주한다.)
+  // [설치하기] — Linux AppImage 업데이트를 시작한다.
+  // 다운로드/설치에 실패하면 앱은 계속 트레이에 상주한다.
   ipcMain.handle('update:install', () => {
     updater.downloadAndInstall();
   });
@@ -441,15 +439,10 @@ app.whenReady().then(async () => {
 
   setupAutoUpdater();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-    else showWindow();
-  });
 });
 
 app.on('window-all-closed', () => {
-  // 트레이 상주 앱이므로 창이 모두 닫혀도 종료하지 않는다(트레이 최소화 시).
-  if (!store.get('minimizeToTray')) quitApp();
+  // Linux 트레이 상주 앱이므로 모든 창이 닫혀도 프로세스를 유지한다.
 });
 
 app.on('before-quit', () => {
