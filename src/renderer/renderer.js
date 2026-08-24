@@ -19,6 +19,8 @@
     installing: false,    // [설치하기] 눌러 다운로드/설치가 진행 중인지
     visibleKeys: new Set(),
     thumbStamp: 0, // 폴링 갱신 시각 — 라이브 썸네일 캐시 무효화용(아래 bustThumb 참고)
+    networkOffline: false,
+    networkToastShown: false,
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -483,7 +485,9 @@
       if (!emptyEl) {
         const e = document.createElement('div');
         e.className = 'empty-state';
-        e.textContent = state.members.length ? T('empty.noMatch') : T('empty.loading');
+        e.textContent = state.networkOffline
+          ? '네트워크 연결이 불안정해요!'
+          : state.members.length ? T('empty.noMatch') : T('empty.loading');
         grid.appendChild(e);
       }
     } else if (emptyEl) {
@@ -540,7 +544,11 @@
     const list = applyFilter(state.members);
     grid.innerHTML = '';
     if (!list.length) {
-      grid.innerHTML = `<div class="empty-state">${state.members.length ? esc(T('empty.noMatch')) : esc(T('empty.loading'))}</div>`;
+      grid.innerHTML = `<div class="empty-state">${
+        state.networkOffline
+          ? '네트워크 연결이 불안정해요!'
+          : state.members.length ? esc(T('empty.noMatch')) : esc(T('empty.loading'))
+      }</div>`;
     } else {
       const frag = document.createDocumentFragment();
       let anim = 0; // 새로 나타나는 카드만 순차 애니메이션(그대로 있는 카드는 그대로)
@@ -1616,30 +1624,23 @@
   function closeModalEl(sel) { const m = $(sel); m.classList.remove('open'); setTimeout(() => (m.hidden = true), sel === '#calModal' ? 380 : 240); }
 
   // ── 문의하기(이메일 · GitHub 이슈) ─────────────
-function wireContact() {
-  const CONTACT = {
-    email: 'mailto:ryoyamada8083@proton.me?subject=' + encodeURIComponent('[스텔라상태] 문의'),
-    github: 'https://github.com/Maroshall/stellastatus_app_unoffical_linux/issues/new',
-  };
+  function wireContact() {
+    const CONTACT = {
+      email: 'mailto:ryoyamada8083@proton.me?subject=' + encodeURIComponent('[스텔라상태] 문의'),
+      github: 'https://github.com/Maroshall/stellastatus_app_unoffical_linux/issues/new',
+    };
+    $('#btnContact').addEventListener('click', () => openModalEl('#contactModal'));
+    $('#closeContact').addEventListener('click', () => closeModalEl('#contactModal'));
+    $('#contactModal').addEventListener('click', (e) => { if (e.target.id === 'contactModal') closeModalEl('#contactModal'); });
+    document.querySelectorAll('.contact-opt').forEach((b) =>
+      b.addEventListener('click', () => {
+        const url = CONTACT[b.dataset.contact];
+        if (url) openLink(url);
+        closeModalEl('#contactModal');
+      }),
+    );
+  }
 
-  // 기존 HTML에 X 문의 항목이 남아 있으면 제거
-  const xContact = document.querySelector('.contact-opt[data-contact="x"]');
-  if (xContact) xContact.remove();
-
-  $('#btnContact').addEventListener('click', () => openModalEl('#contactModal'));
-  $('#closeContact').addEventListener('click', () => closeModalEl('#contactModal'));
-  $('#contactModal').addEventListener('click', (e) => {
-    if (e.target.id === 'contactModal') closeModalEl('#contactModal');
-  });
-
-  document.querySelectorAll('.contact-opt').forEach((b) =>
-    b.addEventListener('click', () => {
-      const url = CONTACT[b.dataset.contact];
-      if (url) openLink(url);
-      closeModalEl('#contactModal');
-    }),
-  );
-}
   // ── 업데이트 기록 ────────────────────────────
   async function openChangelog() {
     openModalEl('#changelogModal');
@@ -1852,6 +1853,7 @@ function wireContact() {
     I18N.setLang(state.settings.language || 'ko');
     I18N.apply(document);
     state.members = (await api.getMembers()) || [];
+    try { state.networkOffline = !!(await api.getNetworkState()); } catch { state.networkOffline = false; }
     state.thumbStamp = Date.now();
     render();
     loadSchedule(); // 뱅온은 시작 시 1회 + 이후 1시간마다 재조회
@@ -1877,6 +1879,8 @@ function wireContact() {
 
     api.onMembers((members) => {
       try {
+        state.networkOffline = false;
+        state.networkToastShown = false;
         state.members = members || [];
         state.thumbStamp = Date.now();
         $('#btnRefresh').querySelector('svg')?.classList.remove('spin');
@@ -1890,6 +1894,46 @@ function wireContact() {
       } catch (err) {
         console.error('members 갱신 처리 오류:', err);
       }
+    });
+    api.onNetwork((info) => {
+      state.networkOffline = info?.offline !== false;
+      if (state.networkOffline) {
+        if (!state.networkToastShown) {
+          state.networkToastShown = true;
+          showToast({
+            icon: 'alert',
+            title: '네트워크 연결이 불안정해요!',
+            desc: '연결이 복구될 때까지 현재 방송 상태를 유지합니다.',
+            duration: 7000,
+            className: 'network-toast',
+          });
+        }
+      } else {
+        // 네트워크가 복구된 경우 사용자에게 즉시 알리고,
+        // poller가 다음 정상 응답으로 최신 방송 상태를 다시 반영한다.
+        state.networkOffline = false;
+        state.networkToastShown = false;
+
+        showToast({
+          icon: 'check',
+          title: '네트워크 연결됐어요!',
+          desc: '다시 방송상태를 불러올게요',
+          duration: 5000,
+          className: 'network-restored-toast',
+        });
+
+        $('#btnRefresh').querySelector('svg')?.classList.remove('spin');
+        render();
+      }
+    });
+    api.onNightAllOffline((info) => {
+      showToast({
+        icon: 'moon',
+        title: info?.title || '스텔라 모두가 오프라인이에요!',
+        desc: info?.message || '잘자요 🌙',
+        duration: 8000,
+        className: 'night-all-offline-toast',
+      });
     });
     api.onPolling((busy) => {
       const svg = $('#btnRefresh').querySelector('svg');
