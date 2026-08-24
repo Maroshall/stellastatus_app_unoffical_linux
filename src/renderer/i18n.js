@@ -57,7 +57,6 @@
       'set.thumbs.t': '썸네일 표시', 'set.thumbs.d': '방송 중인 카드에 미리보기를 표시합니다.',
       'set.tray.t': '닫을 때 트레이로 최소화', 'set.tray.d': 'X 를 눌러도 트레이에서 계속 실행됩니다.',
       'set.startup.t': '시작 시 자동 실행', 'set.startup.d': '부팅 시 트레이에서 자동으로 시작합니다.',
-      'set.beta.t': '베타 버전 받기', 'set.beta.d': '정식 출시 전 베타(시험판)를 우선으로 받아 설치합니다.',
       // 설정 - 알림
       'set.notify.t': '방송 시작 알림', 'set.notify.d': '방송이 시작되면 시스템 알림을 보냅니다.',
       'set.notifyOff.t': '방송 종료 알림', 'set.notifyOff.d': '방송이 끝나면(방종) 시스템 알림을 보냅니다.',
@@ -107,7 +106,6 @@
       // 문의하기
       'contact.title': '문의하기', 'contact.sub': '편한 방법으로 문의해 주세요.',
       'contact.email': '이메일', 'contact.github': 'GitHub 이슈', 'contact.githubSub': '버그 신고 · 기능 제안',
-      'contact.x': 'X (트위터)',
       // 이용약관 / 업데이트 기록
       'terms.title': '이용약관', 'terms.h': '스텔라상태 이용약관',
       'changelog.title': '업데이트 기록', 'changelog.loading': '불러오는 중…',
