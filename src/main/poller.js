@@ -4,6 +4,22 @@ const { profileFor, orderFor } = require('./roster');
 const CHZZK_PUBLIC = 'https://api.chzzk.naver.com';
 const MIN_INTERVAL_SEC = 30;
 
+function isNetworkError(err) {
+  const code = String(err?.code || '').toUpperCase();
+  const msg = String(err?.message || err || '').toLowerCase();
+
+  return [
+    'ENETUNREACH', 'EAI_AGAIN', 'ECONNRESET', 'ECONNREFUSED',
+    'ETIMEDOUT', 'EHOSTUNREACH', 'ENOTFOUND', 'ERR_NETWORK',
+    'ERR_INTERNET_DISCONNECTED', 'NETWORK',
+  ].includes(code)
+    || /network|fetch failed|failed to fetch|internet|offline|socket|dns|timed out|timeout|connection (reset|refused|closed|lost)/i.test(msg);
+}
+
+function statusHasNetworkError(status) {
+  return !!status?.error && isNetworkError(status.error);
+}
+
 /**
  * stellastatus 라이브러리를 사용해 스텔라이브 전체 멤버의 방송 상태를 주기적으로 조회하고,
  * 오프라인 → 라이브 전환을 감지해 이벤트로 알린다.
@@ -25,6 +41,8 @@ class Poller extends EventEmitter {
     this._avatarCache = new Map();    // channelId -> imageUrl
     this._members = [];               // 마지막 병합 결과
     this._busy = false;
+    this._networkOffline = false;
+    this._nightAllOfflineNotified = false;
   }
 
   /** ESM 라이브러리를 로드하고 클라이언트를 초기화한다. */
@@ -42,6 +60,10 @@ class Poller extends EventEmitter {
 
   get members() {
     return this._members;
+  }
+
+  get networkOffline() {
+    return this._networkOffline;
   }
 
   /** 오프라인 멤버도 프로필 이미지를 표시하기 위해 채널 이미지를 조회(캐시). 실패해도 무시. */
@@ -106,6 +128,40 @@ class Poller extends EventEmitter {
     };
   }
 
+  /** 자정(00:00)부터 오전 06:00 사이 모든 멤버가 오프라인인지 확인한다.
+   *
+   * 알림 조건:
+   *  1) 프로그램을 계속 켜둔 상태에서 마지막 라이브 멤버가 오프라인이 됨
+   *  2) 프로그램을 완전히 재시작했고, 첫 정상 조회부터 이미 전원 오프라인임
+   *
+   * 같은 밤 동안에는 중복 알림을 보내지 않는다.
+   */
+  _checkNightAllOffline(members, hadLiveBeforePoll) {
+    const hour = new Date().getHours();
+    const inNightWindow = hour >= 0 && hour < 6;
+
+    if (!inNightWindow) {
+      this._nightAllOfflineNotified = false;
+      return;
+    }
+
+    if (!members.length) return;
+
+    const allOffline = members.every((m) => !m.isLive);
+
+    if (allOffline && !this._nightAllOfflineNotified) {
+      // 첫 정상 조회에서 이미 전원 오프라인인 경우도 허용한다.
+      // hadLiveBeforePoll이 true면 마지막 라이브가 방금 종료된 경우다.
+      // 둘 다 한 번만 알림한다.
+      this._nightAllOfflineNotified = true;
+      this.emit('night-all-offline', {
+        title: '스텔라 모두가 오프라인이에요!',
+        message: '잘자요 🌙',
+        reason: hadLiveBeforePoll ? 'last-live-offline' : 'startup-all-offline',
+      });
+    }
+  }
+
   /** 한 번 폴링한다. */
   async pollOnce() {
     if (!this._client) await this.init();
@@ -115,12 +171,42 @@ class Poller extends EventEmitter {
     try {
       const statuses = await this._client.chzzk.getAllLiveStatuses();
 
+      if (!Array.isArray(statuses)) {
+        const err = new Error('Invalid live status response');
+        err.code = 'NETWORK';
+        throw err;
+      }
+
+      // 라이브러리가 네트워크 오류를 예외 대신 status.error로 반환하는 경우도
+      // 정상적인 OFFLINE 데이터로 취급하지 않는다.
+      const networkStatusError = statuses.find(statusHasNetworkError);
+      if (networkStatusError) {
+        const err = new Error(String(networkStatusError.error));
+        err.code = 'NETWORK';
+        throw err;
+      }
+
+      // 로스터가 존재하는데 상태 목록이 완전히 비어 있으면 연결/응답 이상으로 처리한다.
+      if (this._roster.length > 0 && statuses.length === 0) {
+        const err = new Error('Live status response is empty');
+        err.code = 'NETWORK';
+        throw err;
+      }
+
+      const wasNetworkOffline = this._networkOffline;
+      this._networkOffline = false;
+      if (wasNetworkOffline) this.emit('network-restored');
+
       // 아바타 선(先)조회(캐시에 없을 때만). 병렬.
       await Promise.all(
         this._roster.map((ch) =>
           this._avatarCache.has(ch.id) ? Promise.resolve() : this._fetchAvatar(ch.id),
         ),
       );
+
+      // 이번 정상 응답을 반영하기 직전의 상태를 기억한다.
+      // 네트워크 오류에서는 이 지점까지 오지 않으므로 마지막 라이브 상태가 보존된다.
+      const hadLiveBeforePoll = this._members.some((m) => m.isLive);
 
       // roster 순서(기수별)로 병합
       const byKey = new Map(statuses.map((s) => [s.channel?.key, s]));
@@ -141,11 +227,27 @@ class Poller extends EventEmitter {
 
       this._members = members;
       this.emit('update', members);
+      this._checkNightAllOffline(members, hadLiveBeforePoll);
       if (wentLive.length || wentOffline.length) {
         this.emit('transitions', { wentLive, wentOffline });
       }
       return members;
     } catch (err) {
+      const network = err?.code === 'NETWORK' || isNetworkError(err);
+
+      if (network) {
+        const wasOffline = this._networkOffline;
+        this._networkOffline = true;
+
+        // 네트워크 오류에서는 _members / _prevLive를 절대 갱신하지 않는다.
+        if (!wasOffline) {
+          this.emit('network', {
+            initial: this._members.length === 0,
+            error: err,
+          });
+        }
+      }
+
       this.emit('error', err);
       return this._members;
     } finally {
