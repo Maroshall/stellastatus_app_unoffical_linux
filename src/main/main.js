@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 const {
   app,
   BrowserWindow,
@@ -94,10 +95,9 @@ function createWindow() {
   mainWindow.on('resize', saveBounds);
   mainWindow.on('move', saveBounds);
 
-  // Linux에서는 X를 눌러도 앱을 종료하지 않고 트레이로 숨긴다.
-  // 완전 종료는 트레이 메뉴의 '종료'를 사용한다.
+  // 닫기 → 트레이로 최소화(설정에 따라)
   mainWindow.on('close', (e) => {
-    if (!isQuitting) {
+    if (!isQuitting && store.get('minimizeToTray')) {
       e.preventDefault();
       mainWindow.hide();
     }
@@ -222,6 +222,51 @@ function notifyOffline(member) {
   n.show();
 }
 
+// 네트워크 단절 알림 — 방송 종료와 혼동하지 않도록 별도 알림으로 표시한다.
+function notifyNetwork() {
+  if (!Notification.isSupported()) return;
+
+  const n = new Notification({
+    title: '네트워크 연결이 불안정해요!',
+    body: '연결이 복구될 때까지 현재 방송 상태를 유지합니다.',
+    icon: notifyIcon(),
+    silent: false,
+  });
+  n.on('click', () => showWindow());
+  n.on('failed', (_e, err) => console.error('알림 표시 실패(network):', err));
+  n.show();
+}
+
+// 네트워크 복구 알림 — Linux 시스템 알림(Notification)으로 표시한다.
+function notifyNetworkRestored() {
+  if (!Notification.isSupported()) return;
+
+  const n = new Notification({
+    title: '네트워크 연결됐어요!',
+    body: '다시 방송상태를 불러올게요',
+    icon: notifyIcon(),
+    silent: false,
+  });
+  n.on('click', () => showWindow());
+  n.on('failed', (_e, err) => console.error('알림 표시 실패(network-restored):', err));
+  n.show();
+}
+
+// 자정~오전 6시, 스텔라 전원이 오프라인일 때 표시하는 취침 알림.
+function notifyNightAllOffline() {
+  if (!Notification.isSupported()) return;
+
+  const n = new Notification({
+    title: '스텔라 모두가 오프라인이에요!',
+    body: '잘자요 🌙',
+    icon: notifyIcon(),
+    silent: false,
+  });
+  n.on('click', () => showWindow());
+  n.on('failed', (_e, err) => console.error('알림 표시 실패(night-all-offline):', err));
+  n.show();
+}
+
 // ── 자동 업데이트 ─────────────────────────────────────────
 let lastNotifiedUpdate = null;
 
@@ -267,6 +312,7 @@ function applyLaunchAtStartup(enabled) {
 // ── IPC ───────────────────────────────────────────────────
 function registerIpc() {
   ipcMain.handle('members:get', () => poller.members);
+  ipcMain.handle('members:network-state', () => poller.networkOffline);
   ipcMain.handle('members:refresh', () => poller.pollOnce());
 
   ipcMain.handle('settings:get', () => store.store);
@@ -288,7 +334,8 @@ function registerIpc() {
   // 버튼을 눌렀는데도 알림이 안 보이면 앱이 아니라 OS(알림 권한/집중모드) 쪽 문제임을 알 수 있다.
   ipcMain.handle('notify:test', () => {
     if (!Notification.isSupported()) return { ok: false, reason: 'unsupported' };
-    // show/failed 이벤트를 잠깐 기다렸다가 실제 결과를 반환한다.
+    // show() 직후 바로 반환하면 macOS 의 비동기 'failed'(예: 알림 권한 꺼짐 → UNErrorDomain 오류 1)를
+    // 놓쳐 UI 가 '보냈어요'로 오인한다. show/failed 이벤트를 잠깐 기다렸다가 실제 결과를 돌려준다.
     return new Promise((resolve) => {
       let settled = false;
       const finish = (r) => { if (!settled) { settled = true; resolve(r); } };
@@ -364,8 +411,9 @@ function registerIpc() {
     }
     updater.check({ manual: true });
   });
-  // [설치하기] — Linux AppImage 업데이트를 시작한다.
-  // 다운로드/설치에 실패하면 앱은 계속 트레이에 상주한다.
+  // [설치하기] — 일반 업데이트는 이때 비로소 다운로드하고, 복사/설치는 인스톨러에 넘긴다.
+  // (isQuitting 은 실제 설치 실행 시 app.quit → before-quit 에서 설정된다.
+  //  다운로드가 실패해 설치로 넘어가지 않으면 앱은 계속 트레이에 상주한다.)
   ipcMain.handle('update:install', () => {
     updater.downloadAndInstall();
   });
@@ -433,16 +481,56 @@ app.whenReady().then(async () => {
   poller.on('error', (err) => {
     mainWindow?.webContents.send('members:error', String(err?.message || err));
   });
+  poller.on('network', ({ initial }) => {
+    notifyNetwork();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('members:network', {
+        offline: true,
+        initial: !!initial,
+        message: '네트워크 연결이 불안정해요!',
+      });
+    }
+  });
+  poller.on('network-restored', () => {
+    // 앱 내부 토스트뿐 아니라 Linux 시스템 알림도 표시한다.
+    notifyNetworkRestored();
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('members:network', {
+        offline: false,
+        initial: false,
+        message: '네트워크 연결됐어요! 다시 방송상태를 불러올게요',
+      });
+    }
+  });
+
+  poller.on('night-all-offline', ({ title, message }) => {
+    // Linux 시스템 알림
+    notifyNightAllOffline();
+
+    // 앱 내부 알림
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('members:night-all-offline', {
+        title: title || '스텔라 모두가 오프라인이에요!',
+        message: message || '잘자요 🌙',
+      });
+    }
+  });
 
   await poller.init().catch(() => {});
   poller.start(store.get('pollIntervalSec'));
 
   setupAutoUpdater();
 
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    else showWindow();
+  });
 });
 
 app.on('window-all-closed', () => {
-  // Linux 트레이 상주 앱이므로 모든 창이 닫혀도 프로세스를 유지한다.
+  // 트레이 상주 앱이므로 창이 모두 닫혀도 종료하지 않는다(트레이 최소화 시).
+  if (!store.get('minimizeToTray')) quitApp();
 });
 
 app.on('before-quit', () => {
