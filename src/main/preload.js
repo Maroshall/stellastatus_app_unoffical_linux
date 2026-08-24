@@ -8,9 +8,12 @@ contextBridge.exposeInMainWorld('stella', {
   // 멤버 상태
   getMembers: () => ipcRenderer.invoke('members:get'),
   refresh: () => ipcRenderer.invoke('members:refresh'),
+  getNetworkState: () => ipcRenderer.invoke('members:network-state'),
   onMembers: (cb) => sub('members:update', cb),
   onPolling: (cb) => sub('members:polling', cb),
   onError: (cb) => sub('members:error', cb),
+  onNetwork: (cb) => sub('members:network', cb),
+  onNightAllOffline: (cb) => sub('members:night-all-offline', cb),
   onLive: (cb) => sub('members:live', cb),
 
   // 스케줄(뱅온 정보)
