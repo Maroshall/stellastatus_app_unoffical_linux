@@ -1,101 +1,52 @@
 appId: com.stellastatus.app
-productName: 스텔라상태
+productName: StellaStatus
 copyright: Copyright © 2026 StellaStatus
 
-# (이전엔 afterPack 훅에서 codesign --deep 로 직접 ad-hoc 서명했으나,
-#  --deep 이 헬퍼 서명을 깨뜨려 AMFI 가 앱을 죽이는 문제가 있었다.
-#  이제 mac.identity: "-" 로 electron-builder(@electron/osx-sign)에게 서명을 맡긴다.)
-
+# ── 빌드 디렉터리 ──────────────────────────────────────────
 directories:
   output: dist
   buildResources: build
 
-# 앱에 포함할 파일
+# ── 앱에 포함할 파일 ───────────────────────────────────────
 files:
   - src/**/*
   - build/icon.png
-  - build/icon.ico
   - "!**/*.map"
   - package.json
 
-# ESM 라이브러리(stellastatus)와 그 의존성이 node_modules 에 포함되도록 asar 사용
+# ESM 라이브러리(stellastatus)와 그 의존성이
+# node_modules에 포함되도록 asar 사용
 asar: true
 
-# ── Windows 설치 파일(NSIS) ────────────────────────────────
-win:
+# ── Linux AppImage ─────────────────────────────────────────
+linux:
   target:
-    - target: nsis
+    - target: AppImage
       arch:
         - x64
-  icon: build/icon.png
-  # 실행 파일에 표기될 정보
-  legalTrademarks: StellaStatus
 
-nsis:
-  oneClick: false                 # 설치 도우미(마법사) 표시
-  perMachine: false               # 사용자 단위 설치(관리자 권한 불필요)
-  # 설치 위치 선택은 커스텀 다크 페이지(build/installer.nsh)로 직접 제공
-  allowToChangeInstallationDirectory: false
-  allowElevation: true
-  createDesktopShortcut: true     # 바탕화면 바로가기
-  createStartMenuShortcut: true   # 시작 메뉴 바로가기
-  shortcutName: 스텔라상태
-  runAfterFinish: true
-  deleteAppDataOnUninstall: false
-  installerIcon: build/icon.ico
-  uninstallerIcon: build/icon.ico
-  installerHeaderIcon: build/icon.ico
-  # 브랜드 이미지(다크 + 벨 로고). scripts/gen-installer-art.mjs 로 생성.
-  installerHeader: build/installerHeader.bmp
-  installerSidebar: build/installerSidebar.bmp
-  uninstallerSidebar: build/uninstallerSidebar.bmp
-  warningsAsErrors: false
-  include: build/installer.nsh
+  # 애플리케이션 카테고리
+  category: Utility
 
-# ── macOS 설치 파일(.dmg) ──────────────────────────────────
-# 반드시 macOS 러너에서만 빌드된다(로컬 Windows 불가). GitHub Actions 의 build-mac 잡에서 생성.
-# icon 은 512px 이상 png 를 주면 electron-builder 가 .icns 를 자동 생성한다.
-mac:
-  target:
-    - target: dmg
-      arch:
-        - arm64   # Apple Silicon
-        - x64     # Intel
+  # Linux 앱 아이콘
   icon: build/icon.png
-  category: public.app-category.utilities
-  # 지원 최소 macOS 버전. Electron 43 은 macOS 12(Monterey) 이상을 요구한다.
-  #  - Info.plist 의 LSMinimumSystemVersion 에 반영되어, 더 낮은 버전에서는
-  #    macOS 가 실행을 막고 "이 앱은 macOS 12.0 이상이 필요합니다" 안내를 띄운다.
-  minimumSystemVersion: "12.0"
-  # 인증서(Apple Developer)가 없으므로 ad-hoc("-") 서명한다.
-  #  - electron-builder 내부의 @electron/osx-sign 이 헬퍼(.app)/프레임워크를
-  #    올바른 순서(inside-out)와 헬퍼별 entitlement 로 서명한다.
-  #    (직접 codesign --deep 로 재서명하면 헬퍼 서명 seal 이 깨져 AMFI 가
-  #     실행 시 프로세스를 SIGTRAP 으로 죽인다 → 반드시 osx-sign 에 맡긴다.)
-  #  - allow-jit 등 entitlement 가 없으면 재서명된 V8 이 JIT 메모리를 못 잡고 크래시한다.
-  identity: "-"
-  hardenedRuntime: false
-  entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.plist
-  # ⚠️ macOS 에서는 앱/헬퍼/실행파일 이름을 반드시 ASCII 로 만든다.
-  #  - productName 이 한글("스텔라상태")이면 헬퍼가 "스텔라상태 Helper (GPU)" 처럼
-  #    한글 경로가 되는데, 이 경우 앱이 헬퍼를 실행하는 순간 SIGTRAP 으로 크래시한다.
-  #  - 그래서 mac.executableName 으로 실행파일을, scripts/build-mac.mjs 의
-  #    productName 오버라이드로 .app/헬퍼 이름을 ASCII("StellaStatus")로 고정한다.
-  #  - 사용자에게 보이는 이름(Finder/독/메뉴막대)은 아래 CFBundleDisplayName 으로 한글 유지.
+
+  # 실행 파일 이름
   executableName: StellaStatus
-  extendInfo:
-    CFBundleDisplayName: 스텔라상태
 
-dmg:
-  # 파일명은 ASCII 로 고정한다. (한글이 들어가면 GitHub 업로드 시 이름이 잘려
-  #  '-1.0.4-arm64.dmg' 처럼 되므로. 업데이터는 이름의 arm64/x64 로 아키텍처를 고른다.)
-  artifactName: StellaStatus-${version}-${arch}.dmg
+  # .desktop 파일과 Electron 창(WM_CLASS)을 연결
+  # GNOME/KDE 등의 독에서 실행 중인 앱 아이콘이
+  # 정상적으로 앱과 연결되도록 함
+  syncDesktopName: true
 
-# ── 자동 업데이트(GitHub Releases) ─────────────────────────
-# 배포 전 owner/repo 를 본인 저장소로 바꾸세요.
+# ── GitHub Releases ────────────────────────────────────────
+# 현재 GitHub Actions에서는
+# electron-builder --linux AppImage --publish never
+# 를 사용하므로 빌드할 때 자동 업로드하지 않음.
+#
+# Release 자동 업로드를 사용할 경우 네 포크를 사용.
 publish:
   provider: github
-  owner: tabiluv
+  owner: Maroshall
   repo: stellastatus_app
   releaseType: release
