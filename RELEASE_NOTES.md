@@ -1,24 +1,15 @@
 <!-- i18n:ko -->
-## 스텔라상태 v1.0.6
+## 스텔라상태 v1.0.6.1 (베타)
 
-> v1.0.5 이후의 개선 사항을 모두 담은 **정식(안정) 버전** 입니다.
-> 사용 중 이상이 있으면 설정 → 정보 → **문제 신고** 로 알려주세요.
+> 이 버전은 정식 출시 전 **베타(시험판)** 입니다. 설정 → 일반 → **"베타 버전 받기"** 를 켠 분께 안내됩니다.
+> 사용 중 이상이 있으면 설정 → 정보 → **문제 신고** 로 알려주세요. 정식(안정) 버전을 원하시면 v1.0.6 을 사용하세요.
 
-스텔라상태를 이용해주시는 분들께 진심으로 감사드립니다. 이번 정식 버전은 v1.0.5 이후 베타에서 다듬어 온 기능과 개선을 하나로 모았습니다.
+스텔라상태를 이용해주시는 분들께 진심으로 감사드립니다.
 
-# 수정된 내용
-- 스텔라 카드의 프로필(아바타)을 누르면 스텔라들의 소셜 계정을 확인할 수 있습니다.
-- 한 멤버에게 일정이 여러 개면 **"휴방 + 스페이스"** 처럼 합쳐서 보여주고, 일정이 없는 멤버는 **"정보 없음"** 으로 표시합니다.
-- 카드를 누르면 멤버·시각·상태와, 방송 중이면 제목·카테고리·시청자 수·썸네일을 볼 수 있습니다.
-- 설정 → 정보에 이메일·GitHub 이슈로 바로 가는 신고 버튼을 추가했습니다.
-- 새 버전으로 업데이트하면 첫 실행 때 바뀐 점을 한 번 안내합니다.
-- 히라가나로만 입력해도 멤버가 검색됩니다.
-- 영어/일본어로 볼 때 "저챗"이 **Talk / トーク** 로 표시됩니다.
-- 설치·업데이트 중 표시되는 진행 문구가 선택한 언어로 나옵니다.
-- 번역 로딩 표시 · 썸네일 자동 갱신 · 앱 이름 다국어 등 표시를 개선하였습니다.
-- 알림 테스트 · 시스템 정보 복사 버튼(설정)으로 문제를 쉽게 확인·신고할 수 있습니다.
-- 업데이트 기록·업데이트 확인에서 최신 버전을 안정적으로 받을 수 있습니다.
-- **macOS** 알림이 뜨지 않던 문제를 개선하고, 알림이 차단된 경우 안내가 표시됩니다.
+### 이번 베타에서 바뀐 것 (v1.0.6 이후)
+- **캘린더가 스텔라리움 웹 캘린더로 바뀌었습니다** — 전체·멤버별로 골라 보고, 날짜를 누르면 그날의 상세 일정을 볼 수 있어요. (표시에 인터넷 연결이 필요합니다)
+- **오늘의 뱅온 표시 개선** — 방송 중이 아닌 멤버의 새벽·이월 일정을 숨기지 않고 그대로 보여줍니다. (이월 처리는 지금 방송 중인 멤버에게만 적용)
+- **오류 메시지 복사** — 오류가 나면 그 내용을 그대로 선택·복사해 신고할 수 있게 했습니다. (복사 버튼 추가)
 
 ### 설치 방법
 **Windows**
@@ -36,26 +27,18 @@
 - **macOS** — macOS 12 (Monterey) 이상
 
 <!-- i18n:en -->
-## StellaStatus v1.0.6
+## StellaStatus v1.0.6.1 (Beta)
 
-> This is the **stable release** that brings together every improvement since v1.0.5.
-> If something looks off, please report it via Settings → About → Report a problem.
+> This is a **beta (test build)** released before the stable version. It is offered to users who turned on
+> Settings → General → **"Get beta versions"**. If something looks off, please report it via Settings → About → Report a problem.
+> For the stable build, use v1.0.6.
 
-Thank you so much for using StellaStatus. This stable release consolidates the features and fixes refined in the betas since v1.0.5.
+Thank you so much for using StellaStatus.
 
-# What's changed
-- Tap a member’s profile (avatar) on a Stella card to view their social accounts.
-- Multiple entries for one member are combined (e.g. **"Off + Space"**), and members with nothing scheduled show **"No info"**.
-- Tap a card to see the member, time, and status, plus the title, category, viewer count, and thumbnail when live.
-- Added a report button in Settings → About that goes straight to email or a GitHub issue.
-- After updating to a new version, the first launch shows what changed once.
-- Members can be found by typing hiragana only.
-- In English/Japanese, "저챗" is shown as **Talk / トーク**.
-- Progress messages shown during install/update now appear in the selected language.
-- Improved display with a translation loading indicator, automatic thumbnail refresh, localized app name, and more.
-- Test notification and Copy system info buttons (Settings) make it easy to check and report problems.
-- The changelog and update check reliably deliver the newest version.
-- Fixed an issue where **macOS** notifications didn’t appear, and guidance is shown when notifications are blocked.
+### New in this beta (since v1.0.6)
+- **The calendar is now the Stellarium web calendar** — filter by everyone or a single member, and tap a date to see that day’s schedule in detail. (An internet connection is required to display it.)
+- **Better “Today’s schedule”** — dawn/carried-over entries for members who aren’t live are no longer hidden; they show as usual. (Carry-over now applies only to members who are currently live.)
+- **Copyable error messages** — when an error occurs, you can select and copy its text to report it. (Added a copy button.)
 
 ### How to install
 **Windows**
@@ -73,26 +56,17 @@ Thank you so much for using StellaStatus. This stable release consolidates the f
 - **macOS** — macOS 12 (Monterey) or later
 
 <!-- i18n:ja -->
-## StellaStatus v1.0.6
+## StellaStatus v1.0.6.1 (ベータ)
 
-> v1.0.5 以降の改善をすべてまとめた **正式（安定）版** です。
-> 不具合があれば、設定 → 情報 → 問題を報告 からお知らせください。
+> このバージョンは正式リリース前の **ベータ（試験版）** です。設定 → 一般 → **「ベータ版を受け取る」** をオンにした方に案内されます。
+> 不具合があれば、設定 → 情報 → 問題を報告 からお知らせください。安定版をご希望の場合は v1.0.6 をご利用ください。
 
-StellaStatus をご利用いただきありがとうございます。今回の正式版は、v1.0.5 以降のベータで磨いてきた機能と改善を一つにまとめました。
+StellaStatus をご利用いただきありがとうございます。
 
-# 変更内容
-- ステラカードのプロフィール（アイコン）をタップすると、ステラたちのソーシャルアカウントを確認できます。
-- 1人に予定が複数ある場合は **「お休み + スペース」** のようにまとめ、予定のないメンバーは **「情報なし」** と表示します。
-- カードをタップすると、メンバー・時刻・状態に加え、配信中はタイトル・カテゴリ・視聴者数・サムネイルを確認できます。
-- 設定 → 情報 に、メール・GitHub Issue へ直接進む報告ボタンを追加しました。
-- 新しいバージョンに更新すると、初回起動時に変更点を一度だけ案内します。
-- ひらがなだけでもメンバーを検索できます。
-- 英語・日本語で「저챗」が **Talk / トーク** と表示されます。
-- インストール・更新中に表示される進捗メッセージが選択言語で表示されます。
-- 翻訳の読み込み表示・サムネイル自動更新・アプリ名の多言語化など、表示を改善しました。
-- 通知テスト・システム情報のコピーボタン（設定）で問題を簡単に確認・報告できます。
-- 更新履歴・更新確認で最新バージョンを安定して受け取れます。
-- **macOS** の通知が表示されない問題を改善し、ブロックされている場合は案内を表示します。
+### このベータでの変更（v1.0.6 以降）
+- **カレンダーが Stellarium ウェブカレンダーに変わりました** — 全体・メンバー別に絞り込み、日付をタップするとその日の予定を詳しく確認できます。（表示にはインターネット接続が必要です）
+- **「今日の配信予定」の表示改善** — 配信中でないメンバーの深夜・繰り越しの予定を隠さず、そのまま表示します。（繰り越し処理は現在配信中のメンバーにのみ適用）
+- **エラーメッセージのコピー** — エラー時にその内容をそのまま選択・コピーして報告できるようにしました。（コピー ボタンを追加）
 
 ### インストール方法
 **Windows**
