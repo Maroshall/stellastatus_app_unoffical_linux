@@ -1,52 +1,26 @@
 appId: com.stellastatus.app
-productName: StellaStatus
+
+productName: 스텔라상태
+
 copyright: Copyright © 2026 StellaStatus
 
-# ── 빌드 디렉터리 ──────────────────────────────────────────
 directories:
   output: dist
   buildResources: build
 
-# ── 앱에 포함할 파일 ───────────────────────────────────────
 files:
-  - src/**/*
-  - build/icon.png
-  - "!**/*.map"
-  - package.json
+  - "**/*"
+  - "!**/*.md"
+  - "!**/*.txt"
 
-# ESM 라이브러리(stellastatus)와 그 의존성이
-# node_modules에 포함되도록 asar 사용
 asar: true
 
-# ── Linux AppImage ─────────────────────────────────────────
 linux:
   target:
-    - target: AppImage
-      arch:
-        - x64
-
-  # 애플리케이션 카테고리
+    - AppImage
   category: Utility
 
-  # Linux 앱 아이콘
-  icon: build/icon.png
+  artifactName: "${productName}-${version}.${ext}"
 
-  # 실행 파일 이름
-  executableName: StellaStatus
-
-  # .desktop 파일과 Electron 창(WM_CLASS)을 연결
-  # GNOME/KDE 등의 독에서 실행 중인 앱 아이콘이
-  # 정상적으로 앱과 연결되도록 함
-  syncDesktopName: true
-
-# ── GitHub Releases ────────────────────────────────────────
-# 현재 GitHub Actions에서는
-# electron-builder --linux AppImage --publish never
-# 를 사용하므로 빌드할 때 자동 업로드하지 않음.
-#
-# Release 자동 업로드를 사용할 경우 네 포크를 사용.
 publish:
   provider: github
-  owner: Maroshall
-  repo: stellastatus_app
-  releaseType: release
