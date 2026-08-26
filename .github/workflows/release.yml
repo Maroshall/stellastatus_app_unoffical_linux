@@ -1,13 +1,5 @@
 name: Release
 
-# v* 태그를 푸시하면 Linux AppImage를 빌드하고
-# GitHub Releases에 업로드한다.
-#
-# 예:
-# v1.0.6   → 정식 Release
-# v1.0.6.1 → 정식 Release
-# v1.0.6.2 → 정식 Release
-
 on:
   push:
     tags:
@@ -34,49 +26,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Git 태그에서 전체 버전을 가져온다.
-      # electron-builder는 1.0.6.2를 허용하지 않으므로
-      # package.json version에는 1.0.6을 사용하고
-      # fullVersion에는 1.0.6.2를 저장한다.
-      - name: Set release version from Git tag
-        shell: bash
+      - name: Check package version
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          echo "package.json version:"
+          node -p "require('./package.json').version"
 
-          echo "Release version: ${TAG_VERSION}"
-
-          node -e '
-            const fs = require("fs");
-
-            const pkg = JSON.parse(
-              fs.readFileSync("package.json", "utf8")
-            );
-
-            const tagVersion = process.env.TAG_VERSION;
-            const parts = tagVersion.split(".");
-
-            if (
-              parts.length < 3 ||
-              !parts.slice(0, 3).every(p => /^\d+$/.test(p))
-            ) {
-              throw new Error(
-                `Invalid release tag version: ${tagVersion}`
-              );
-            }
-
-            // electron-builder용 SemVer
-            pkg.version = parts.slice(0, 3).join(".");
-
-            // 실제 전체 릴리스 버전
-            pkg.fullVersion = tagVersion;
-
-            fs.writeFileSync(
-              "package.json",
-              JSON.stringify(pkg, null, 2) + "\n"
-            );
-          '
-        env:
-          TAG_VERSION: ${{ github.ref_name }}
+          echo "package.json fullVersion:"
+          node -p "require('./package.json').fullVersion"
 
       - name: Generate icons
         run: npm run gen-icon
@@ -87,34 +43,19 @@ jobs:
       - name: Build Linux AppImage
         run: npx electron-builder --linux AppImage --publish never
 
-      # electron-builder는 package.json의 version을 사용하기 때문에
-      # 기본 파일명은 1.0.6으로 생성된다.
-      # 여기서 Git 태그의 전체 버전으로 파일명을 변경한다.
-      - name: Rename AppImage to full release version
+      - name: Rename AppImage
         shell: bash
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
 
-          shopt -s nullglob
-          files=(dist/*.AppImage)
+          for file in dist/*.AppImage; do
+            [ -e "$file" ] || continue
 
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "No AppImage found."
-            exit 1
-          fi
-
-          for file in "${files[@]}"; do
             base="$(basename "$file")"
             stem="${base%.AppImage}"
-            product_prefix="${stem%-*}"
+            product="${stem%-*}"
 
-            new_file="dist/${product_prefix}-${TAG_VERSION}.AppImage"
-
-            echo "Renaming:"
-            echo "  ${base}"
-            echo "  -> ${new_file}"
-
-            mv "$file" "$new_file"
+            mv "$file" "dist/${product}-${TAG_VERSION}.AppImage"
           done
 
       - name: Upload AppImage artifact
