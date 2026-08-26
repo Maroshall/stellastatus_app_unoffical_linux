@@ -26,6 +26,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Debug package version
+        run: |
+          echo "=== Current directory ==="
+          pwd
+
+          echo "=== Root package.json ==="
+          node -e "const p=require('./package.json'); console.log('version =', p.version); console.log('fullVersion =', p.fullVersion)"
+
+          echo "=== All package.json files ==="
+          find . -name package.json -not -path './node_modules/*' -print
+
+          echo "=== electron-builder config ==="
+          if [ -f electron-builder.yml ]; then
+            cat electron-builder.yml
+          fi
+
+          if [ -f electron-builder.yaml ]; then
+            cat electron-builder.yaml
+          fi
+
       - name: Check package version
         run: |
           echo "package.json version:"
