@@ -124,6 +124,7 @@
     sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
     star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.12 2.12 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.12 2.12 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.12 2.12 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.12 2.12 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.12 2.12 0 0 0 1.597-1.16z"/>',
     calendar: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>',
+    copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
     chevronLeft: '<path d="m15 18-6-6 6-6"/>',
     chevronRight: '<path d="m9 18 6-6-6-6"/>',
     // 소셜 브랜드 아이콘 — 각 브랜드 공식 로고(Simple Icons). 모두 채움(fill) 방식.
@@ -151,6 +152,14 @@
   // ── 유틸 ────────────────────────────────────
   const esc = (s) =>
     String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // 오류 메시지를 '복사 가능한' 형태로 렌더한다 — 텍스트 선택 허용(전역 user-select:none 예외) + 복사 버튼.
+  // detail(실제 오류 원문)이 있으면 그대로 붙여넣어 신고할 수 있게 함께 보여준다.
+  function errorBoxHtml(message, detail) {
+    const full = detail ? `${message}\n${detail}` : String(message || '');
+    return `<div class="err-box"><span class="err-text">${esc(message)}</span>`
+      + (detail ? `<code class="err-detail">${esc(detail)}</code>` : '')
+      + `<button class="err-copy" type="button" data-copy="${esc(full)}">${icon('copy', 13)}<span>${esc(T('err.copy'))}</span></button></div>`;
+  }
   const isPinned = (key) => (state.settings.pinned || []).includes(key);
   const nfmt = (n) => (n == null ? '' : Number(n).toLocaleString('ko-KR'));
   const openLink = (url) => url && api.openExternal(url);
@@ -643,7 +652,8 @@
 
   async function loadSchedule() {
     const data = await api.getTodaySchedule();
-    if (data && data.error) { state.scheduleItems = 'error'; renderSchedule(true); return; }
+    if (data && data.error) { state.scheduleItems = 'error'; state.scheduleError = String(data.error); renderSchedule(true); return; }
+    state.scheduleError = '';
     let items = Array.isArray(data) ? data : [];
     const today = kstDateStr(Date.now());
     const yesterday = kstDateStr(Date.now() - 86400000);
@@ -653,8 +663,11 @@
         const ms = parseOpen(it.startDateTime);
         if (ms == null) return true; // 시간 없는 항목(휴방 등)은 오늘 것으로 유지
         const d = kstDateStr(ms);
-        // 오늘 것 + 어제 시작한 '방송'(휴방 제외)만 남긴다. 어제 것은 진행 중일 때만 표시(아래 분류에서 판단).
-        return d === today || (d === yesterday && !isRest(it.title));
+        if (d === today) return true;
+        // 어제 시작한 '방송'(휴방 제외): '지금 라이브인 멤버'만 오늘로 이월해 보여준다.
+        // 방송중이지 않은 멤버의 어제 일정은 다음날로 넘어간 것으로 보고 오늘의 뱅온에서 제외한다.
+        if (d === yesterday && !isRest(it.title)) { const mem = scheduleMember(it); return !!(mem && mem.isLive); }
+        return false;
       })
       .map((it) => {
         const ms = parseOpen(it.startDateTime);
@@ -662,9 +675,13 @@
         const d = kstDateStr(ms);
         const kstHour = new Date(ms + KST_OFFSET).getUTCHours();
         // 밤샘/이월 방송으로 취급: 어제 시작분, 또는 오늘 '새벽(6시 이전)' 시작분.
-        // → 지금 라이브일 때만 노출하고, 끝났으면(오프라인) 종료로 남기지 않는다(분류에서 제외).
         const overnight = d === yesterday || (d === today && kstHour < 6);
-        return overnight ? { ...it, _carry: true, _fromYesterday: d === yesterday } : it;
+        if (!overnight) return it;
+        // 이월(_carry) 처리는 '지금 라이브인 멤버'에게만 적용한다. 방송중이지 않은 멤버는
+        // 이월 처리를 걸지 않아, 오늘 새벽 일정도 숨기지 않고 일반 '오늘' 항목으로 그대로 표시한다.
+        const mem = scheduleMember(it);
+        if (!(mem && mem.isLive)) return it;
+        return { ...it, _carry: true, _fromYesterday: d === yesterday };
       });
     renderSchedule(true);
   }
@@ -825,7 +842,7 @@
 
   function renderSchedule(force = false) {
     const strip = $('#schedStrip');
-    if (state.scheduleItems === 'error') { strip.innerHTML = `<div class="sched-error">${esc(T('sched.error'))}</div>`; state._schedSig = '__err'; return; }
+    if (state.scheduleItems === 'error') { strip.innerHTML = `<div class="sched-error">${errorBoxHtml(T('sched.error'), state.scheduleError)}</div>`; state._schedSig = '__err'; return; }
     if (!Array.isArray(state.scheduleItems)) return; // 아직 로드 전
 
     const rows = classifyScheduleRows();
@@ -930,14 +947,26 @@
     return `${y}년 ${m + 1}월`;
   }
 
+  // 캘린더는 web(stellarium.kr/calendar)을 webview 로 임베드해 보여준다.
+  // (예전의 네이티브 캘린더 렌더 함수들은 더 이상 호출되지 않는다 — 아래 loadCalendar 등)
   async function openCalendar() {
-    const now = new Date(Date.now() + KST_OFFSET); // UTC 필드 = KST 벽시계
-    CAL.y = now.getUTCFullYear();
-    CAL.m = now.getUTCMonth();
-    closeDayDetail();
-    $('#calWeekdays').innerHTML = (CAL_WD[I18N.lang] || CAL_WD.ko).map((w, i) => `<div class="cal-wd${i === 0 ? ' sun' : ''}">${esc(w)}</div>`).join('');
     openModalEl('#calModal');
-    await loadCalendar();
+    const wv = $('#calWebview');
+    if (!wv || wv._loaded) return; // 최초 1회만 로드하고, 이후엔 그대로 유지
+    wv._loaded = true;
+    const loading = $('#calLoading');
+    const errEl = $('#calError');
+    if (loading) loading.hidden = false;
+    if (errEl) errEl.hidden = true;
+    let url = 'https://stellarium.kr/calendar';
+    try { url = await api.getWebCalUrl(); } catch { /* 기본값 사용 */ }
+    wv.addEventListener('did-finish-load', () => { if (loading) loading.hidden = true; });
+    wv.addEventListener('did-fail-load', (e) => {
+      if (e.errorCode === -3) return; // ABORTED(하위 리소스/취소) 은 무시
+      if (loading) loading.hidden = true;
+      if (errEl) { errEl.hidden = false; errEl.innerHTML = errorBoxHtml(T('sched.error'), `${e.errorDescription || ''} — ${url}`); }
+    });
+    wv.src = url;
   }
   // 월 이동: 켜놓은 오른쪽 세부 패널은 그대로 유지한다(원래 선택한 날의 일정을 계속 보여줌).
   function calShift(delta) { let m = CAL.m + delta, y = CAL.y; if (m < 0) { m = 11; y--; } else if (m > 11) { m = 0; y++; } CAL.y = y; CAL.m = m; loadCalendar(); }
@@ -1247,16 +1276,6 @@
     $('#btnCalendar').addEventListener('click', openCalendar);
     $('#closeCal').addEventListener('click', () => closeModalEl('#calModal'));
     $('#calModal').addEventListener('click', (e) => { if (e.target.id === 'calModal') closeModalEl('#calModal'); });
-    $('#calPrev').addEventListener('click', () => calShift(-1));
-    $('#calNext').addEventListener('click', () => calShift(1));
-    // '+N' 클릭 → 그 날의 세부 일정을 오른쪽 패널에 연다(데이터 재요청 없이 리렌더).
-    $('#calGrid').addEventListener('click', (e) => {
-      const more = e.target.closest('.cal-more');
-      if (!more) return;
-      openDayDetail(more.dataset.day);
-    });
-    // 세부 패널의 닫기 버튼(매번 새로 그려지므로 위임).
-    $('#calDetail').addEventListener('click', (e) => { if (e.target.closest('#calDetailClose')) closeDayDetail(); });
   }
 
   // 제목이 카드 폭보다 길면 양쪽 그라데이션 + 좌우 왕복(마퀴) 애니메이션
@@ -1414,6 +1433,14 @@
     $('#btnCopyDiag').addEventListener('click', copyDiagnostics);
     $('#btnUninstall').addEventListener('click', () => api.uninstall());
   }
+
+  // 오류 메시지 '복사' 버튼(위임) — 어디에 있든 .err-copy 를 누르면 data-copy 원문을 클립보드로.
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest && e.target.closest('.err-copy');
+    if (!btn) return;
+    try { await api.copyToClipboard(btn.dataset.copy || ''); } catch { /* 실패해도 텍스트는 직접 선택·복사 가능 */ }
+    showToast({ icon: 'checkmark', title: T('err.copied'), duration: 2000 });
+  });
 
   // 진단 정보(버그 신고용)를 사람이 읽기 좋은 형태로 만들어 화면에 보여주고 클립보드로 복사한다.
   function friendlyOS(d) {
@@ -1650,7 +1677,7 @@
     // FLIP: 로딩 상태 높이 → 내용 채운 뒤 높이로 부드럽게 전환(위·아래로 늘어남)
     const fromH = modal.getBoundingClientRect().height;
     if (!rels || !rels.length) {
-      host.innerHTML = `<div class="cl-error">${esc(T('changelog.error'))}</div>`;
+      host.innerHTML = `<div class="cl-error">${errorBoxHtml(T('changelog.error'))}</div>`;
     } else {
       host.innerHTML = '';
       renderChangelogItems(host, rels, cur);
@@ -1819,8 +1846,6 @@
     setIcon('#closeTerms', 'x', 14);
     setIcon('#closeSched', 'x', 14);
     setIcon('#closeCal', 'x', 14);
-    setIcon('#calPrev', 'chevronLeft', 20);
-    setIcon('#calNext', 'chevronRight', 20);
     // data-icon 속성이 있는 요소(설정 사이드바, 링크 등) 일괄 채우기
     document.querySelectorAll('[data-icon]').forEach((el) => (el.innerHTML = icon(el.dataset.icon, 16)));
   }

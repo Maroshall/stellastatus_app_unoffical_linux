@@ -298,21 +298,14 @@
     </div>
   </div>
 
-  <!-- 뱅온 캘린더 -->
+  <!-- 뱅온 캘린더 — web(stellarium.kr/calendar)을 webview 로 임베드 -->
   <div class="modal-backdrop" id="calModal" hidden>
     <div class="modal cal-modal">
       <button class="icon-btn cal-close" id="closeCal"></button>
-      <div class="cal-head">
-        <button class="cal-nav" id="calPrev" aria-label="이전 달"></button>
-        <div class="cal-title" id="calTitle"></div>
-        <button class="cal-nav" id="calNext" aria-label="다음 달"></button>
-      </div>
-      <div class="cal-body">
-        <div class="cal-left">
-          <div class="cal-weekdays" id="calWeekdays"></div>
-          <div class="cal-grid" id="calGrid"></div>
-        </div>
-        <aside class="cal-detail" id="calDetail" hidden></aside>
+      <div class="cal-embed">
+        <webview id="calWebview" class="cal-webview" src="about:blank"></webview>
+        <div class="cal-embed-state" id="calLoading"><span class="cl-spinner"></span></div>
+        <div class="cal-embed-state" id="calError" hidden></div>
       </div>
     </div>
   </div>

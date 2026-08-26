@@ -46,6 +46,7 @@
       'sched.started': '시작됨', 'sched.ended': '종료', 'sched.upcoming': '예정', 'sched.rest': '휴방',
       'sched.noinfo': '정보 없음', 'sched.noinfoDesc': '오늘 등록된 일정이 없어요.', 'cal.open': '캘린더로 보기',
       'cal.ice': '빙하기', 'cal.noSchedule': '일정이 없어요', 'cal.count': '개 일정',
+      'err.copy': '오류 복사', 'err.copied': '오류 메시지를 복사했어요',
       'schedD.time': '시각', 'schedD.plan': '뱅온', 'schedD.liveTitle': '방송 제목', 'schedD.category': '카테고리', 'schedD.viewers': '시청자',
       // 설정 공통
       'settings.title': '설정',
@@ -145,6 +146,7 @@
       'sched.started': 'Started', 'sched.ended': 'Ended', 'sched.upcoming': 'Upcoming', 'sched.rest': 'Off',
       'sched.noinfo': 'No info', 'sched.noinfoDesc': 'No schedule today.', 'cal.open': 'Calendar view',
       'cal.ice': 'Streaming break', 'cal.noSchedule': 'No schedule', 'cal.count': ' events',
+      'err.copy': 'Copy error', 'err.copied': 'Error message copied',
       'schedD.time': 'Time', 'schedD.plan': 'Bang-on', 'schedD.liveTitle': 'Live title', 'schedD.category': 'Category', 'schedD.viewers': 'Viewers',
       'settings.title': 'Settings',
       'nav.general': 'General', 'nav.notify': 'Notifications', 'nav.info': 'About', 'nav.contact': 'Contact',
@@ -236,6 +238,7 @@
       'sched.started': '開始', 'sched.ended': '終了', 'sched.upcoming': '予定', 'sched.rest': 'お休み',
       'sched.noinfo': '情報なし', 'sched.noinfoDesc': '今日の予定はありません。', 'cal.open': 'カレンダー表示',
       'cal.ice': '配信休止', 'cal.noSchedule': '予定がありません', 'cal.count': '件',
+      'err.copy': 'エラーをコピー', 'err.copied': 'エラーメッセージをコピーしました',
       'schedD.time': '時刻', 'schedD.plan': 'バンオン', 'schedD.liveTitle': '配信タイトル', 'schedD.category': 'カテゴリ', 'schedD.viewers': '視聴者',
       'settings.title': '設定',
       'nav.general': '一般', 'nav.notify': '通知', 'nav.info': '情報', 'nav.contact': 'お問い合わせ',

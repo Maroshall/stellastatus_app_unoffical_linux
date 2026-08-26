@@ -78,6 +78,8 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      // 캘린더는 web(stellarium.kr/calendar)을 <webview> 로 임베드해 쓴다.
+      webviewTag: true,
     },
   });
 
@@ -359,6 +361,11 @@ function registerIpc() {
   ipcMain.handle('open:external', (_e, url) => {
     if (typeof url === 'string' && /^(https?:\/\/|mailto:)/.test(url)) shell.openExternal(url);
   });
+
+  // 임베드 캘린더(web) 주소 — 개발 모드는 로컬 web 서버, 배포는 stellarium.kr.
+  // (환경변수 STELLA_WEB_CAL_URL 로 재정의 가능)
+  ipcMain.handle('app:webCalUrl', () =>
+    process.env.STELLA_WEB_CAL_URL || (isDev ? 'http://localhost:3000/calendar' : 'https://stellarium.kr/calendar'));
 
   ipcMain.handle('update:check', () => {
     if (isDev) {

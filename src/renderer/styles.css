@@ -316,7 +316,13 @@ body {
 .modal-backdrop .modal.cal-modal { transform: translateY(100%); opacity: 1; transition: transform .36s cubic-bezier(.16,.84,.3,1); }
 .modal-backdrop.open .modal.cal-modal { transform: translateY(0); opacity: 1; }
 .cal-head { flex: 0 0 auto; }
-.cal-close { position: absolute; top: 12px; right: 12px; }
+.cal-close { position: absolute; top: 12px; right: 12px; z-index: 5; }
+
+/* web 캘린더를 임베드하는 webview */
+.cal-embed { flex: 1 1 auto; min-height: 0; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--panel-brd); background: var(--panel-2); }
+.cal-webview { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+.cal-embed-state { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--panel-2); color: var(--text-dim); font-size: 13px; text-align: center; padding: 20px; }
+.cal-embed-state[hidden] { display: none; }
 .cal-head { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 18px; }
 .cal-title { font-size: 20px; font-weight: 800; letter-spacing: .2px; min-width: 168px; text-align: center; }
 .cal-nav { -webkit-app-region: no-drag; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; background: transparent; color: var(--text-dim); transition: background .15s, color .15s, border-color .15s; }
@@ -427,6 +433,16 @@ body {
 .sd-actions .mini-btn { display: inline-flex; align-items: center; gap: 6px; }
 .sd-actions .mini-btn svg { width: 15px; height: 15px; }
 .sched-empty, .sched-error { color: var(--text-mute); font-size: 13px; padding: 14px 4px; }
+
+/* ── 오류 메시지(복사 가능) ─────────────────────
+   전역 user-select:none 이라 오류 텍스트를 드래그 선택조차 못 한다.
+   버그 신고 때 그대로 붙여넣을 수 있게, 오류 메시지는 선택을 허용하고 복사 버튼을 둔다. */
+.err-box { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 100%; }
+.err-box .err-text { user-select: text; -webkit-user-select: text; cursor: text; white-space: pre-wrap; word-break: break-word; }
+.err-box .err-detail { user-select: text; -webkit-user-select: text; cursor: text; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-dim); background: rgba(255,255,255,.05); border: 1px solid var(--panel-brd); border-radius: 6px; padding: 6px 8px; max-width: 100%; white-space: pre-wrap; word-break: break-word; }
+.err-copy { -webkit-app-region: no-drag; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: var(--text-dim); background: rgba(255,255,255,.06); border: 1px solid var(--panel-brd); border-radius: 7px; padding: 4px 9px; transition: background .12s, color .12s; }
+.err-copy:hover { background: rgba(255,255,255,.12); color: var(--text); }
+.err-copy svg { width: 13px; height: 13px; }
 
 /* ── 설정 모달 ──────────────────────────────── */
 /* 설정 팝업은 타이틀바(로고/창 제어)를 가리지 않도록 그 아래부터 덮는다 */

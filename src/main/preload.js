@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('stella', {
 
   // 외부 링크 / 창 제어
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
+  getWebCalUrl: () => ipcRenderer.invoke('app:webCalUrl'),
   minimize: () => ipcRenderer.send('window:minimize'),
   maximizeToggle: () => ipcRenderer.send('window:maximize-toggle'),
   close: () => ipcRenderer.send('window:close'),
