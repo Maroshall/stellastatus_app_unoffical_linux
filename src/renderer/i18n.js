@@ -58,7 +58,6 @@
       'set.thumbs.t': '썸네일 표시', 'set.thumbs.d': '방송 중인 카드에 미리보기를 표시합니다.',
       'set.tray.t': '닫을 때 트레이로 최소화', 'set.tray.d': 'X 를 눌러도 트레이에서 계속 실행됩니다.',
       'set.startup.t': '시작 시 자동 실행', 'set.startup.d': '부팅 시 트레이에서 자동으로 시작합니다.',
-      'set.beta.t': '베타 버전 받기', 'set.beta.d': '정식 출시 전 베타(시험판)를 우선으로 받아 설치합니다.',
       // 설정 - 알림
       'set.notify.t': '방송 시작 알림', 'set.notify.d': '방송이 시작되면 시스템 알림을 보냅니다.',
       'set.notifyOff.t': '방송 종료 알림', 'set.notifyOff.d': '방송이 끝나면(방종) 시스템 알림을 보냅니다.',
@@ -108,7 +107,6 @@
       // 문의하기
       'contact.title': '문의하기', 'contact.sub': '편한 방법으로 문의해 주세요.',
       'contact.email': '이메일', 'contact.github': 'GitHub 이슈', 'contact.githubSub': '버그 신고 · 기능 제안',
-      'contact.x': 'X (트위터)',
       // 이용약관 / 업데이트 기록
       'terms.title': '이용약관', 'terms.h': '스텔라상태 이용약관',
       'changelog.title': '업데이트 기록', 'changelog.loading': '불러오는 중…',
@@ -156,7 +154,6 @@
       'set.thumbs.t': 'Show thumbnails', 'set.thumbs.d': 'Show a preview on live cards.',
       'set.tray.t': 'Minimize to tray on close', 'set.tray.d': 'Keeps running in the tray when you press X.',
       'set.startup.t': 'Launch on startup', 'set.startup.d': 'Starts automatically in the tray on boot.',
-      'set.beta.t': 'Get beta versions', 'set.beta.d': 'Prefer and install pre-release (beta) builds before the stable release.',
       'set.notify.t': 'Stream start notifications', 'set.notify.d': 'Sends a system notification when a stream begins.',
       'set.notifyOff.t': 'Stream end alerts', 'set.notifyOff.d': 'Sends a notification when a stream ends.',
       'set.notifyTest.t': 'Test notification', 'set.notifyTest.d': 'Sends a test notification. If nothing appears, check your system notification permissions.', 'set.notifyTest.btn': 'Test',
@@ -248,7 +245,6 @@
       'set.thumbs.t': 'サムネイル表示', 'set.thumbs.d': '配信中のカードにプレビューを表示します。',
       'set.tray.t': '閉じたらトレイに最小化', 'set.tray.d': 'X を押してもトレイで実行し続けます。',
       'set.startup.t': '起動時に自動実行', 'set.startup.d': '起動時にトレイで自動的に開始します。',
-      'set.beta.t': 'ベータ版を受け取る', 'set.beta.d': '正式リリース前のベータ（試験版）を優先して受け取り、インストールします。',
       'set.notify.t': '配信開始通知', 'set.notify.d': '配信が始まるとシステム通知を送ります。',
       'set.notifyOff.t': '配信終了通知', 'set.notifyOff.d': '配信が終わるとシステム通知を送ります。',
       'set.notifyTest.t': '通知テスト', 'set.notifyTest.d': 'テスト通知を送ります。通知が表示されない場合は、システムの通知許可を確認してください。', 'set.notifyTest.btn': 'テスト',
