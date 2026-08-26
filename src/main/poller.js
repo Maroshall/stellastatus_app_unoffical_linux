@@ -25,6 +25,7 @@ class Poller extends EventEmitter {
     this._avatarCache = new Map();    // channelId -> imageUrl
     this._members = [];               // 마지막 병합 결과
     this._busy = false;
+    this._networkOffline = false;
   }
 
   /** ESM 라이브러리를 로드하고 클라이언트를 초기화한다. */
@@ -42,6 +43,21 @@ class Poller extends EventEmitter {
 
   get members() {
     return this._members;
+  }
+
+  get networkOffline() {
+    return this._networkOffline;
+  }
+
+  _isNetworkError(err) {
+    const code = String(err?.code || '').toUpperCase();
+    const message = String(err?.message || err || '').toLowerCase();
+    const codes = new Set([
+      'ECONNRESET', 'ECONNREFUSED', 'ECONNABORTED', 'ETIMEDOUT',
+      'ENETUNREACH', 'EHOSTUNREACH', 'EAI_AGAIN', 'ENOTFOUND',
+      'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_SOCKET', 'UND_ERR_FETCH_FAILED',
+    ]);
+    return codes.has(code) || /network|fetch failed|failed to fetch|connection|socket|timeout|timed out|dns|internet|offline|unreachable|eai_again|enotfound/i.test(message);
   }
 
   /** 오프라인 멤버도 프로필 이미지를 표시하기 위해 채널 이미지를 조회(캐시). 실패해도 무시. */
@@ -139,6 +155,12 @@ class Poller extends EventEmitter {
         this._prevLive.set(m.key, m.isLive);
       }
 
+      // 정상 응답을 받았으면 네트워크가 복구된 것으로 처리한다.
+      if (this._networkOffline) {
+        this._networkOffline = false;
+        this.emit('network-restored');
+      }
+
       this._members = members;
       this.emit('update', members);
       if (wentLive.length || wentOffline.length) {
@@ -146,10 +168,16 @@ class Poller extends EventEmitter {
       }
       return members;
     } catch (err) {
+      if (this._isNetworkError(err)) {
+        const initial = !this._networkOffline;
+        this._networkOffline = true;
+        this.emit('network', { initial });
+      }
       this.emit('error', err);
       return this._members;
     } finally {
       this._busy = false;
+    this._networkOffline = false;
       this.emit('polling', false);
     }
   }
