@@ -19,6 +19,8 @@
     installing: false,    // [설치하기] 눌러 다운로드/설치가 진행 중인지
     visibleKeys: new Set(),
     thumbStamp: 0, // 폴링 갱신 시각 — 라이브 썸네일 캐시 무효화용(아래 bustThumb 참고)
+    networkOffline: false,
+    networkToastShown: false,
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -124,7 +126,7 @@
     sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
     star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.12 2.12 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.12 2.12 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.12 2.12 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.12 2.12 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.12 2.12 0 0 0 1.597-1.16z"/>',
     calendar: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/>',
-    copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+    copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 2 2 2"/>',
     chevronLeft: '<path d="m15 18-6-6 6-6"/>',
     chevronRight: '<path d="m9 18 6-6-6-6"/>',
     // 소셜 브랜드 아이콘 — 각 브랜드 공식 로고(Simple Icons). 모두 채움(fill) 방식.
@@ -152,8 +154,7 @@
   // ── 유틸 ────────────────────────────────────
   const esc = (s) =>
     String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  // 오류 메시지를 '복사 가능한' 형태로 렌더한다 — 텍스트 선택 허용(전역 user-select:none 예외) + 복사 버튼.
-  // detail(실제 오류 원문)이 있으면 그대로 붙여넣어 신고할 수 있게 함께 보여준다.
+  // 오류 메시지를 복사 가능한 형태로 렌더한다.
   function errorBoxHtml(message, detail) {
     const full = detail ? `${message}\n${detail}` : String(message || '');
     return `<div class="err-box"><span class="err-text">${esc(message)}</span>`
@@ -492,7 +493,9 @@
       if (!emptyEl) {
         const e = document.createElement('div');
         e.className = 'empty-state';
-        e.textContent = state.members.length ? T('empty.noMatch') : T('empty.loading');
+        e.textContent = state.networkOffline
+          ? '네트워크 연결이 불안정해요!'
+          : state.members.length ? T('empty.noMatch') : T('empty.loading');
         grid.appendChild(e);
       }
     } else if (emptyEl) {
@@ -549,7 +552,11 @@
     const list = applyFilter(state.members);
     grid.innerHTML = '';
     if (!list.length) {
-      grid.innerHTML = `<div class="empty-state">${state.members.length ? esc(T('empty.noMatch')) : esc(T('empty.loading'))}</div>`;
+      grid.innerHTML = `<div class="empty-state">${
+        state.networkOffline
+          ? '네트워크 연결이 불안정해요!'
+          : state.members.length ? esc(T('empty.noMatch')) : esc(T('empty.loading'))
+      }</div>`;
     } else {
       const frag = document.createDocumentFragment();
       let anim = 0; // 새로 나타나는 카드만 순차 애니메이션(그대로 있는 카드는 그대로)
@@ -664,8 +671,7 @@
         if (ms == null) return true; // 시간 없는 항목(휴방 등)은 오늘 것으로 유지
         const d = kstDateStr(ms);
         if (d === today) return true;
-        // 어제 시작한 '방송'(휴방 제외): '지금 라이브인 멤버'만 오늘로 이월해 보여준다.
-        // 방송중이지 않은 멤버의 어제 일정은 다음날로 넘어간 것으로 보고 오늘의 뱅온에서 제외한다.
+        // 어제 시작한 방송은 현재 라이브인 경우에만 오늘 일정으로 이월한다.
         if (d === yesterday && !isRest(it.title)) { const mem = scheduleMember(it); return !!(mem && mem.isLive); }
         return false;
       })
@@ -675,10 +681,10 @@
         const d = kstDateStr(ms);
         const kstHour = new Date(ms + KST_OFFSET).getUTCHours();
         // 밤샘/이월 방송으로 취급: 어제 시작분, 또는 오늘 '새벽(6시 이전)' 시작분.
+        // → 지금 라이브일 때만 노출하고, 끝났으면(오프라인) 종료로 남기지 않는다(분류에서 제외).
         const overnight = d === yesterday || (d === today && kstHour < 6);
         if (!overnight) return it;
-        // 이월(_carry) 처리는 '지금 라이브인 멤버'에게만 적용한다. 방송중이지 않은 멤버는
-        // 이월 처리를 걸지 않아, 오늘 새벽 일정도 숨기지 않고 일반 '오늘' 항목으로 그대로 표시한다.
+        // 이월 처리는 현재 라이브인 멤버에게만 적용한다.
         const mem = scheduleMember(it);
         if (!(mem && mem.isLive)) return it;
         return { ...it, _carry: true, _fromYesterday: d === yesterday };
@@ -947,26 +953,14 @@
     return `${y}년 ${m + 1}월`;
   }
 
-  // 캘린더는 web(stellarium.kr/calendar)을 webview 로 임베드해 보여준다.
-  // (예전의 네이티브 캘린더 렌더 함수들은 더 이상 호출되지 않는다 — 아래 loadCalendar 등)
   async function openCalendar() {
+    const now = new Date(Date.now() + KST_OFFSET); // UTC 필드 = KST 벽시계
+    CAL.y = now.getUTCFullYear();
+    CAL.m = now.getUTCMonth();
+    closeDayDetail();
+    $('#calWeekdays').innerHTML = (CAL_WD[I18N.lang] || CAL_WD.ko).map((w, i) => `<div class="cal-wd${i === 0 ? ' sun' : ''}">${esc(w)}</div>`).join('');
     openModalEl('#calModal');
-    const wv = $('#calWebview');
-    if (!wv || wv._loaded) return; // 최초 1회만 로드하고, 이후엔 그대로 유지
-    wv._loaded = true;
-    const loading = $('#calLoading');
-    const errEl = $('#calError');
-    if (loading) loading.hidden = false;
-    if (errEl) errEl.hidden = true;
-    let url = 'https://stellarium.kr/calendar';
-    try { url = await api.getWebCalUrl(); } catch { /* 기본값 사용 */ }
-    wv.addEventListener('did-finish-load', () => { if (loading) loading.hidden = true; });
-    wv.addEventListener('did-fail-load', (e) => {
-      if (e.errorCode === -3) return; // ABORTED(하위 리소스/취소) 은 무시
-      if (loading) loading.hidden = true;
-      if (errEl) { errEl.hidden = false; errEl.innerHTML = errorBoxHtml(T('sched.error'), `${e.errorDescription || ''} — ${url}`); }
-    });
-    wv.src = url;
+    await loadCalendar();
   }
   // 월 이동: 켜놓은 오른쪽 세부 패널은 그대로 유지한다(원래 선택한 날의 일정을 계속 보여줌).
   function calShift(delta) { let m = CAL.m + delta, y = CAL.y; if (m < 0) { m = 11; y--; } else if (m > 11) { m = 0; y++; } CAL.y = y; CAL.m = m; loadCalendar(); }
@@ -1276,6 +1270,16 @@
     $('#btnCalendar').addEventListener('click', openCalendar);
     $('#closeCal').addEventListener('click', () => closeModalEl('#calModal'));
     $('#calModal').addEventListener('click', (e) => { if (e.target.id === 'calModal') closeModalEl('#calModal'); });
+    $('#calPrev').addEventListener('click', () => calShift(-1));
+    $('#calNext').addEventListener('click', () => calShift(1));
+    // '+N' 클릭 → 그 날의 세부 일정을 오른쪽 패널에 연다(데이터 재요청 없이 리렌더).
+    $('#calGrid').addEventListener('click', (e) => {
+      const more = e.target.closest('.cal-more');
+      if (!more) return;
+      openDayDetail(more.dataset.day);
+    });
+    // 세부 패널의 닫기 버튼(매번 새로 그려지므로 위임).
+    $('#calDetail').addEventListener('click', (e) => { if (e.target.closest('#calDetailClose')) closeDayDetail(); });
   }
 
   // 제목이 카드 폭보다 길면 양쪽 그라데이션 + 좌우 왕복(마퀴) 애니메이션
@@ -1312,7 +1316,6 @@
     $('#setThumbs').checked = s.showThumbnails !== false;
     $('#setTray').checked = s.minimizeToTray !== false;
     $('#setStartup').checked = !!s.launchAtStartup;
-    $('#setBeta').checked = !!s.betaChannel;
     $('#setInterval').value = String(s.pollIntervalSec || 60);
     $('#setLanguage').value = I18N.normalize(s.language) || 'ko';
     buildMemberList('#subList', s.subscribed, saveSubscriptions);
@@ -1420,25 +1423,18 @@
     $('#setThumbs').addEventListener('change', (e) => { save({ showThumbnails: e.target.checked }); render(); });
     $('#setTray').addEventListener('change', (e) => save({ minimizeToTray: e.target.checked }));
     $('#setStartup').addEventListener('change', (e) => save({ launchAtStartup: e.target.checked }));
-    // 베타 채널 토글: 저장 후 곧바로 업데이트를 다시 확인해 새 채널 기준(정식/베타) 최신 버전을 안내한다.
-    $('#setBeta').addEventListener('change', async (e) => {
-      await save({ betaChannel: e.target.checked });
-      state.manualUpdateCheck = true;
-      api.checkUpdate();
-    });
     $('#setInterval').addEventListener('change', (e) => save({ pollIntervalSec: Number(e.target.value) }));
 
     $('#btnCheckUpdate').addEventListener('click', () => { state.manualUpdateCheck = true; api.checkUpdate(); });
     $('#btnReport').addEventListener('click', () => openModalEl('#contactModal'));
     $('#btnCopyDiag').addEventListener('click', copyDiagnostics);
-    $('#btnUninstall').addEventListener('click', () => api.uninstall());
   }
 
-  // 오류 메시지 '복사' 버튼(위임) — 어디에 있든 .err-copy 를 누르면 data-copy 원문을 클립보드로.
+  // 오류 메시지 복사 버튼은 동적 렌더링을 위해 이벤트 위임으로 처리한다.
   document.addEventListener('click', async (e) => {
     const btn = e.target.closest && e.target.closest('.err-copy');
     if (!btn) return;
-    try { await api.copyToClipboard(btn.dataset.copy || ''); } catch { /* 실패해도 텍스트는 직접 선택·복사 가능 */ }
+    try { await api.copyToClipboard(btn.dataset.copy || ''); } catch { /* 텍스트 선택으로도 복사 가능 */ }
     showToast({ icon: 'checkmark', title: T('err.copied'), duration: 2000 });
   });
 
@@ -1650,19 +1646,21 @@
   // 캘린더는 아래로 슬라이드하는 시간(.36s)에 맞춰 조금 더 늦게 감춘다.
   function closeModalEl(sel) { const m = $(sel); m.classList.remove('open'); setTimeout(() => (m.hidden = true), sel === '#calModal' ? 380 : 240); }
 
-  // ── 문의하기(이메일 · GitHub 이슈 · X) ────────
+  // ── 문의하기(이메일 · GitHub 이슈) ─────────────
   function wireContact() {
     const CONTACT = {
-      email: 'mailto:contact@stellarium.kr?subject=' + encodeURIComponent('[스텔라상태] 문의'),
-      github: 'https://github.com/tabiluv/stellastatus_app/issues/new',
-      x: 'https://x.com/tabi_1uv',
+      email: 'mailto:ryoyamada8083@proton.me?subject=' + encodeURIComponent('[스텔라상태] 문의'),
+      github: 'https://github.com/Maroshall/stellastatus_app_unoffical_linux/issues/new',
     };
-    const xSub = $('#coXsub'); if (xSub) xSub.textContent = '@tabi_1uv';
     $('#btnContact').addEventListener('click', () => openModalEl('#contactModal'));
     $('#closeContact').addEventListener('click', () => closeModalEl('#contactModal'));
     $('#contactModal').addEventListener('click', (e) => { if (e.target.id === 'contactModal') closeModalEl('#contactModal'); });
     document.querySelectorAll('.contact-opt').forEach((b) =>
-      b.addEventListener('click', () => { openLink(CONTACT[b.dataset.contact]); closeModalEl('#contactModal'); }),
+      b.addEventListener('click', () => {
+        const url = CONTACT[b.dataset.contact];
+        if (url) openLink(url);
+        closeModalEl('#contactModal');
+      }),
     );
   }
 
@@ -1846,6 +1844,8 @@
     setIcon('#closeTerms', 'x', 14);
     setIcon('#closeSched', 'x', 14);
     setIcon('#closeCal', 'x', 14);
+    setIcon('#calPrev', 'chevronLeft', 20);
+    setIcon('#calNext', 'chevronRight', 20);
     // data-icon 속성이 있는 요소(설정 사이드바, 링크 등) 일괄 채우기
     document.querySelectorAll('[data-icon]').forEach((el) => (el.innerHTML = icon(el.dataset.icon, 16)));
   }
@@ -1876,6 +1876,7 @@
     I18N.setLang(state.settings.language || 'ko');
     I18N.apply(document);
     state.members = (await api.getMembers()) || [];
+    try { state.networkOffline = !!(await api.getNetworkState()); } catch { state.networkOffline = false; }
     state.thumbStamp = Date.now();
     render();
     loadSchedule(); // 뱅온은 시작 시 1회 + 이후 1시간마다 재조회
@@ -1901,6 +1902,8 @@
 
     api.onMembers((members) => {
       try {
+        state.networkOffline = false;
+        state.networkToastShown = false;
         state.members = members || [];
         state.thumbStamp = Date.now();
         $('#btnRefresh').querySelector('svg')?.classList.remove('spin');
@@ -1914,6 +1917,46 @@
       } catch (err) {
         console.error('members 갱신 처리 오류:', err);
       }
+    });
+    api.onNetwork((info) => {
+      state.networkOffline = info?.offline !== false;
+      if (state.networkOffline) {
+        if (!state.networkToastShown) {
+          state.networkToastShown = true;
+          showToast({
+            icon: 'alert',
+            title: '네트워크 연결이 불안정해요!',
+            desc: '연결이 복구될 때까지 현재 방송 상태를 유지합니다.',
+            duration: 7000,
+            className: 'network-toast',
+          });
+        }
+      } else {
+        // 네트워크가 복구된 경우 사용자에게 즉시 알리고,
+        // poller가 다음 정상 응답으로 최신 방송 상태를 다시 반영한다.
+        state.networkOffline = false;
+        state.networkToastShown = false;
+
+        showToast({
+          icon: 'check',
+          title: '네트워크 연결됐어요!',
+          desc: '다시 방송상태를 불러올게요',
+          duration: 5000,
+          className: 'network-restored-toast',
+        });
+
+        $('#btnRefresh').querySelector('svg')?.classList.remove('spin');
+        render();
+      }
+    });
+    api.onNightAllOffline((info) => {
+      showToast({
+        icon: 'moon',
+        title: info?.title || '스텔라 모두가 오프라인이에요!',
+        desc: info?.message || '잘자요 🌙',
+        duration: 8000,
+        className: 'night-all-offline-toast',
+      });
     });
     api.onPolling((busy) => {
       const svg = $('#btnRefresh').querySelector('svg');
