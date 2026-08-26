@@ -25,7 +25,6 @@ let PKG_FULL_VERSION = '';
 try { PKG_FULL_VERSION = require('../../package.json').fullVersion || ''; } catch { /* ignore */ }
 function appVersion() { return PKG_FULL_VERSION || app.getVersion(); }
 
-const APP_ID = 'com.stellastatus.app';
 const ICON_PATH = path.join(app.getAppPath(), 'build', 'icon.png');
 const isDev = process.argv.includes('--dev') || !app.isPackaged;
 
@@ -34,8 +33,6 @@ let tray = null;
 let isQuitting = false;
 const poller = new Poller();
 
-// 윈도우 알림에 앱 이름이 제대로 표시되도록 AppUserModelID 설정
-app.setAppUserModelId(APP_ID);
 
 // GPU 셰이더 디스크 캐시가 잠겨(백신 실시간 검사/중복 실행 등) 이동에 실패하면
 // "Unable to move the cache (0x5)" / "Gpu Cache Creation failed" 로그가 뜬다(동작엔 무해).
@@ -78,8 +75,6 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
-      // 캘린더는 web(stellarium.kr/calendar)을 <webview> 로 임베드해 쓴다.
-      webviewTag: true,
     },
   });
 
@@ -227,6 +222,51 @@ function notifyOffline(member) {
   n.show();
 }
 
+// 네트워크 단절 알림 — 방송 종료와 혼동하지 않도록 별도 알림으로 표시한다.
+function notifyNetwork() {
+  if (!Notification.isSupported()) return;
+
+  const n = new Notification({
+    title: '네트워크 연결이 불안정해요!',
+    body: '연결이 복구될 때까지 현재 방송 상태를 유지합니다.',
+    icon: notifyIcon(),
+    silent: false,
+  });
+  n.on('click', () => showWindow());
+  n.on('failed', (_e, err) => console.error('알림 표시 실패(network):', err));
+  n.show();
+}
+
+// 네트워크 복구 알림 — Linux 시스템 알림(Notification)으로 표시한다.
+function notifyNetworkRestored() {
+  if (!Notification.isSupported()) return;
+
+  const n = new Notification({
+    title: '네트워크 연결됐어요!',
+    body: '다시 방송상태를 불러올게요',
+    icon: notifyIcon(),
+    silent: false,
+  });
+  n.on('click', () => showWindow());
+  n.on('failed', (_e, err) => console.error('알림 표시 실패(network-restored):', err));
+  n.show();
+}
+
+// 자정~오전 6시, 스텔라 전원이 오프라인일 때 표시하는 취침 알림.
+function notifyNightAllOffline() {
+  if (!Notification.isSupported()) return;
+
+  const n = new Notification({
+    title: '스텔라 모두가 오프라인이에요!',
+    body: '잘자요 🌙',
+    icon: notifyIcon(),
+    silent: false,
+  });
+  n.on('click', () => showWindow());
+  n.on('failed', (_e, err) => console.error('알림 표시 실패(night-all-offline):', err));
+  n.show();
+}
+
 // ── 자동 업데이트 ─────────────────────────────────────────
 let lastNotifiedUpdate = null;
 
@@ -272,6 +312,7 @@ function applyLaunchAtStartup(enabled) {
 // ── IPC ───────────────────────────────────────────────────
 function registerIpc() {
   ipcMain.handle('members:get', () => poller.members);
+  ipcMain.handle('members:network-state', () => poller.networkOffline);
   ipcMain.handle('members:refresh', () => poller.pollOnce());
 
   ipcMain.handle('settings:get', () => store.store);
@@ -362,11 +403,6 @@ function registerIpc() {
     if (typeof url === 'string' && /^(https?:\/\/|mailto:)/.test(url)) shell.openExternal(url);
   });
 
-  // 임베드 캘린더(web) 주소 — 개발 모드는 로컬 web 서버, 배포는 stellarium.kr.
-  // (환경변수 STELLA_WEB_CAL_URL 로 재정의 가능)
-  ipcMain.handle('app:webCalUrl', () =>
-    process.env.STELLA_WEB_CAL_URL || (isDev ? 'http://localhost:3000/calendar' : 'https://stellarium.kr/calendar'));
-
   ipcMain.handle('update:check', () => {
     if (isDev) {
       // 개발 모드(패키징 전)에서는 업데이트를 확인할 수 없다.
@@ -388,7 +424,6 @@ function registerIpc() {
   // 진단 정보(버그 신고용). 사용자가 자기 시스템 정보를 몰라도 그대로 복사해 붙여넣을 수 있게 한다.
   ipcMain.handle('app:diagnostics', () => ({
     version: appVersion(),
-    beta: !!store.get('betaChannel'),
     platform: process.platform,                 // 'darwin' | 'win32' | ...
     arch: process.arch,                          // 'arm64' | 'x64' | ...
     osVersion: (() => { try { return process.getSystemVersion(); } catch { return ''; } })(), // 예: macOS '26.6.1'
@@ -401,27 +436,6 @@ function registerIpc() {
   // 막히는 경우가 있어, 안전하게 메인 프로세스의 Electron clipboard 로 복사한다.
   ipcMain.handle('clipboard:write', (_e, text) => { clipboard.writeText(String(text ?? '')); return true; });
 
-  // 앱 제거 — 설치 폴더의 제거 프로그램 실행
-  ipcMain.handle('app:uninstall', async () => {
-    const uninstaller = path.join(path.dirname(process.execPath), '스텔라상태 제거.exe');
-    if (isDev || !fs.existsSync(uninstaller)) {
-      await dialog.showMessageBox(mainWindow, {
-        type: 'info', title: '제거', message: '제거 프로그램을 찾을 수 없습니다.',
-        detail: '정식 설치본에서만 제거할 수 있습니다.',
-      });
-      return;
-    }
-    const r = await dialog.showMessageBox(mainWindow, {
-      type: 'warning', buttons: ['제거', '취소'], defaultId: 1, cancelId: 1,
-      title: '스텔라상태 제거', message: '스텔라상태를 제거할까요?',
-      detail: '설치된 파일과 바로가기가 삭제됩니다.',
-    });
-    if (r.response === 0) {
-      spawn(uninstaller, ['--uninstall'], { detached: true, stdio: 'ignore' }).unref();
-      isQuitting = true;
-      app.quit();
-    }
-  });
 
   // 커스텀 타이틀바 창 제어
   ipcMain.on('window:minimize', () => mainWindow?.minimize());
@@ -465,6 +479,41 @@ app.whenReady().then(async () => {
   });
   poller.on('error', (err) => {
     mainWindow?.webContents.send('members:error', String(err?.message || err));
+  });
+  poller.on('network', ({ initial }) => {
+    notifyNetwork();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('members:network', {
+        offline: true,
+        initial: !!initial,
+        message: '네트워크 연결이 불안정해요!',
+      });
+    }
+  });
+  poller.on('network-restored', () => {
+    // 앱 내부 토스트뿐 아니라 Linux 시스템 알림도 표시한다.
+    notifyNetworkRestored();
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('members:network', {
+        offline: false,
+        initial: false,
+        message: '네트워크 연결됐어요! 다시 방송상태를 불러올게요',
+      });
+    }
+  });
+
+  poller.on('night-all-offline', ({ title, message }) => {
+    // Linux 시스템 알림
+    notifyNightAllOffline();
+
+    // 앱 내부 알림
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('members:night-all-offline', {
+        title: title || '스텔라 모두가 오프라인이에요!',
+        message: message || '잘자요 🌙',
+      });
+    }
   });
 
   await poller.init().catch(() => {});
