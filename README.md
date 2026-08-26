@@ -2,104 +2,233 @@
 
 **한국어** | [English](README.en.md) | [日本語](README.jp.md)
 
-스텔라이브 멤버의 치지직 방송 상태를 확인하고, 방송이 시작되면 윈도우 알림을 보내주는 데스크톱 앱입니다.
+스텔라이브 멤버의 치지직 방송 상태를 확인하고, 방송이 시작되면 데스크톱 알림을 보내주는 **Linux용 비공식 포크**입니다.
 
-이 앱은 스텔라이브가 제공하는 공식 서비스가 아닌, 팬이 운영하는 비공식 서비스입니다.
+> ⚠️ 이 저장소는 원본 프로젝트의 포크입니다.  
+> 원본 프로젝트: https://github.com/tabiluv/stellastatus_app  
+> 이 포크는 원본 프로젝트를 기반으로 Linux 환경에서 사용할 수 있도록 **AppImage 빌드 및 Linux 지원을 추가**한 버전입니다.
+>
+> 원본 프로젝트의 기능과 MIT 라이선스를 따르며, Linux 관련 변경사항을 제외한 기본적인 프로젝트 방향은 원본을 따릅니다.
+
+스텔라이브가 제공하는 공식 서비스가 아니며 팬이 제작·배포하는 비공식 프로그램입니다.
 
 방송 상태는 치지직, 방송 스케줄(뱅온)은 StelLight 데이터를 사용하며,
 [`stellastatus`](https://www.npmjs.com/package/stellastatus) 라이브러리와 Electron으로 만들어졌습니다.
 
-> 📌 정식·베타 버전의 차이와 베타 버전 받는 방법은 **[버전 안내](VERSIONING.md)** 를 참고하세요.
 
 ## 기능
 
 - 전 멤버의 치지직 방송 상태를 주기적으로 확인
-- 구독한 멤버의 방송이 시작되면 윈도우 알림 (클릭 시 라이브로 이동)
+- 구독한 멤버의 방송이 시작되면 데스크톱 알림
 - 방송 시작 시 기본 브라우저로 자동 열기 (선택)
 - 멤버별 프로필, 라이브 제목·카테고리·시청자 수, 썸네일 표시
 - 오늘의 뱅온(StelLight 데이터 기반) 표시
-- 트레이 상주, 윈도우 시작 시 자동 실행 옵션
-- GitHub 릴리스를 통한 자체 업데이트
+- 트레이 상주 및 로그인 시 자동 실행 옵션
+- GitHub Releases를 통한 Linux AppImage 업데이트 확인 및 다운로드
+
+## Linux 지원
+
+현재 배포 대상은 다음과 같습니다.
+
+- **Linux x86_64 (x64)**
+- **AppImage**
+
+Electron 기반이므로 배포판에 따라 동작 차이가 있을 수 있습니다. 이 포크는 Arch Linux 등 일반적인 x86_64 Linux 환경을 기준으로 테스트합니다.
+
+## 설치
+
+GitHub Releases에서 `.AppImage` 파일을 내려받습니다.
+
+실행 권한을 부여한 뒤 실행하세요.
+
+```bash
+chmod +x StellaStatus-*.AppImage
+./StellaStatus-*.AppImage
+```
+
+파일 관리자에서 실행 권한을 설정하여 실행해도 됩니다.
 
 ## 개발 / 실행
 
-Node.js 18 이상이 필요합니다.
+Node.js 24 이상을 권장합니다.
 
 ```bash
-npm install
+npm ci
 npm run gen-icon
 npm run gen-logos
 npm start
 ```
 
-개발자 도구를 함께 열려면 `npm run dev`.
-
-## 설치 파일 빌드
-
-커스텀 인스톨러(`스텔라상태 Setup.exe`)를 한 번에 빌드합니다.
+개발자 도구를 함께 열려면:
 
 ```bash
-npm run build-setup
-```
+npm run dev
+```# 스텔라상태 (StellaStatus)
 
-빌드 과정은 메인 앱 패키징 → 인스톨러에 앱 본체 동봉 → 단일 실행 파일 생성 순이며,
-결과물은 `dist-installer/스텔라상태 Setup.exe` 하나입니다. Electron과 앱이 모두 포함되어
-있어 이 파일만 있으면 설치됩니다.
+**한국어** | [English](README.en.md) | [日本語](README.jp.md)
 
-인스톨러는 프레임리스 다크 UI(이용약관, 설치 위치 선택, 진행, 완료)로 동작하고,
-바탕화면·시작 메뉴 바로가기와 제어판 제거 항목을 등록합니다. 앱 안 설정에서도 제거할 수 있습니다.
+스텔라이브 멤버의 치지직 방송 상태를 확인하고, 방송이 시작되면 데스크톱 알림을 보내주는 **Linux용 비공식 포크**입니다.
 
-> 빌드 중 `winCodeSign` 압축 해제가 심볼릭 링크 권한 부족으로 실패하면,
-> Windows 설정 > 개인 정보 및 보안 > 개발자용 > 개발자 모드를 켠 뒤 다시 빌드하세요.
+> ⚠️ 이 저장소는 원본 프로젝트의 포크입니다.  
+> 원본 프로젝트: https://github.com/tabiluv/stellastatus_app  
+> 이 포크는 원본 프로젝트를 기반으로 Linux 환경에서 사용할 수 있도록 **AppImage 빌드 및 Linux 지원을 추가**한 버전입니다.
+>
+> 원본 프로젝트의 기능과 MIT 라이선스를 따르며, Linux 관련 변경사항을 제외한 기본적인 프로젝트 방향은 원본을 따릅니다.
 
-## 설치 및 SmartScreen 안내
+스텔라이브가 제공하는 공식 서비스가 아니며 팬이 제작·배포하는 비공식 프로그램입니다.
 
-`스텔라상태 Setup.exe`를 실행하면 됩니다.
+방송 상태는 치지직, 방송 스케줄(뱅온)은 StelLight 데이터를 사용하며,
+[`stellastatus`](https://www.npmjs.com/package/stellastatus) 라이브러리와 Electron으로 만들어졌습니다.
 
-코드 서명이 되어 있지 않아 처음 실행 시 SmartScreen 경고가 나타날 수 있습니다.
-파란 창에서 "추가 정보"를 누른 뒤 "실행"을 누르면 됩니다. 브라우저에서 다운로드할 때
-경고가 뜨면 다운로드 항목에서 "유지"를 선택하세요.
 
-## 배포 (GitHub Releases)
+## 기능
 
-배포 파일은 `스텔라상태 Setup.exe` 하나입니다. 자체 업데이터가 GitHub Releases API로
-최신 릴리스를 확인하므로 별도 메타데이터 파일은 필요 없습니다.
+- 전 멤버의 치지직 방송 상태를 주기적으로 확인
+- 구독한 멤버의 방송이 시작되면 데스크톱 알림
+- 방송 시작 시 기본 브라우저로 자동 열기 (선택)
+- 멤버별 프로필, 라이브 제목·카테고리·시청자 수, 썸네일 표시
+- 오늘의 뱅온(StelLight 데이터 기반) 표시
+- 트레이 상주 및 로그인 시 자동 실행 옵션
+- GitHub Releases를 통한 Linux AppImage 업데이트 확인 및 다운로드
 
-저장소에 코드를 올린 뒤, 버전 태그를 푸시하면 GitHub Actions가 윈도우에서 인스톨러를
-빌드해 릴리스에 업로드합니다.
+## Linux 지원
+
+현재 배포 대상은 다음과 같습니다.
+
+- **Linux x86_64 (x64)**
+- **AppImage**
+
+Electron 기반이므로 배포판에 따라 동작 차이가 있을 수 있습니다. 이 포크는 Arch Linux 등 일반적인 x86_64 Linux 환경을 기준으로 테스트합니다.
+
+## 설치
+
+GitHub Releases에서 `.AppImage` 파일을 내려받습니다.
+
+실행 권한을 부여한 뒤 실행하세요.
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+chmod +x StellaStatus-*.AppImage
+./StellaStatus-*.AppImage
 ```
 
-자동 배포를 쓰려면 저장소 Settings > Actions > General > Workflow permissions에서
-"Read and write permissions"를 켜야 합니다.
+파일 관리자에서 실행 권한을 설정하여 실행해도 됩니다.
 
-직접 올릴 경우, `npm run build-setup`으로 만든 `dist-installer/스텔라상태 Setup.exe`를
-릴리스에 첨부하면 됩니다.
+## 개발 / 실행
 
-새 버전을 낼 때는 `package.json`의 `version`을 올린 뒤 `v1.0.x` 태그를 푸시합니다.
-기존 사용자 앱은 실행 시(및 6시간마다) 새 릴리스를 확인하고, 설치를 누르면 새 인스톨러로
-업데이트합니다.
+Node.js 24 이상을 권장합니다.
+
+```bash
+npm ci
+npm run gen-icon
+npm run gen-logos
+npm start
+```
+
+개발자 도구를 함께 열려면:
+
+```bash
+npm run dev
+```
+
+## AppImage 빌드
+
+Linux 환경에서:
+
+```bash
+npm ci
+npm run gen-icon
+npm run gen-logos
+npm run dist
+```
+
+결과물은 `dist/*.AppImage`에 생성됩니다.
+
+GitHub Actions에서는 **Actions → Build Linux → Run workflow**로 테스트 빌드를 만들 수 있습니다.
+
+## 업데이트
+
+앱은 GitHub Releases API를 통해 새 버전을 확인합니다.
+
+새 AppImage가 있으면 앱에서 다운로드할 수 있으며, 다운로드한 AppImage를 실행하여 새 버전으로 전환합니다.
+
+> Linux AppImage는 일반적인 설치 프로그램과 달리 기존 설치본을 덮어쓰지 않습니다. 업데이트 시 새 AppImage가 별도 파일로 다운로드될 수 있습니다.
 
 ## 데이터 출처
 
-- 방송 상태: 치지직 내부 API. 공식 문서가 없는 엔드포인트이므로 응답 구조가 바뀌거나
-  차단될 수 있으며, 개인·비상업 용도를 전제로 합니다.
-- 방송 스케줄: 팬 제작 서비스 StelLight의 공개 API를 사용합니다. 서버 부담을 줄이기 위해 확인 주기는
-  최소 30초로 제한됩니다.
+- 방송 상태: 치지직 내부 API. 공식 문서가 없는 엔드포인트이므로 응답 구조가 바뀌거나 차단될 수 있으며, 개인·비상업 용도를 전제로 합니다.
+- 방송 스케줄: 팬 제작 서비스 StelLight의 공개 API를 사용합니다. 서버 부담을 줄이기 위해 확인 주기는 최소 30초로 제한됩니다.
 
-## 개인정보 처리방침 (Privacy policy)
+## 개인정보 처리방침
 
 - 이 앱은 사용자의 개인정보를 수집하거나 외부로 전송하지 않습니다.
 - 앱은 아래 서비스에만 네트워크 요청을 보냅니다.
   - **치지직(CHZZK)** — 방송 상태 조회
   - **StelLight** — 방송 스케줄(뱅온) 조회
   - **GitHub** — 업데이트 확인 및 다운로드
-- 알림 구독 목록, 확인 주기 등 **모든 설정은 사용자 PC(로컬)에만 저장**되며 외부로 전송되지 않습니다.
-- 사용자가 요청하지 않은 정보는 어떤 외부 서버로도 전송하지 않습니다.
+- 알림 구독 목록, 확인 주기 등 모든 설정은 사용자 PC에 로컬로 저장됩니다.
+- 사용자가 요청하지 않은 정보는 외부 서버로 전송하지 않습니다.
 
-## 라이선스
+## 라이선스 및 저작권
 
-MIT
+이 프로젝트는 **MIT License**에 따라 배포됩니다.
+
+이 저장소는 다음 원본 프로젝트의 포크입니다.
+
+- 원본: https://github.com/tabiluv/stellastatus_app
+- 포크: https://github.com/Maroshall/stellastatus_app
+
+원본 프로젝트의 저작권 및 MIT 라이선스 조건을 존중하며, 이 포크에서 추가·수정한 Linux 관련 코드는 동일한 프로젝트 라이선스 조건에 따라 배포됩니다.
+
+자세한 내용은 저장소의 `LICENSE` 파일을 확인하세요.
+
+
+## AppImage 빌드
+
+Linux 환경에서:
+
+```bash
+npm ci
+npm run gen-icon
+npm run gen-logos
+npm run dist
+```
+
+결과물은 `dist/*.AppImage`에 생성됩니다.
+
+GitHub Actions에서는 **Actions → Build Linux → Run workflow**로 테스트 빌드를 만들 수 있습니다.
+
+## 업데이트
+
+앱은 GitHub Releases API를 통해 새 버전을 확인합니다.
+
+새 AppImage가 있으면 앱에서 다운로드할 수 있으며, 다운로드한 AppImage를 실행하여 새 버전으로 전환합니다.
+
+> Linux AppImage는 일반적인 설치 프로그램과 달리 기존 설치본을 덮어쓰지 않습니다. 업데이트 시 새 AppImage가 별도 파일로 다운로드될 수 있습니다.
+
+## 데이터 출처
+
+- 방송 상태: 치지직 내부 API. 공식 문서가 없는 엔드포인트이므로 응답 구조가 바뀌거나 차단될 수 있으며, 개인·비상업 용도를 전제로 합니다.
+- 방송 스케줄: 팬 제작 서비스 StelLight의 공개 API를 사용합니다. 서버 부담을 줄이기 위해 확인 주기는 최소 30초로 제한됩니다.
+
+## 개인정보 처리방침
+
+- 이 앱은 사용자의 개인정보를 수집하거나 외부로 전송하지 않습니다.
+- 앱은 아래 서비스에만 네트워크 요청을 보냅니다.
+  - **치지직(CHZZK)** — 방송 상태 조회
+  - **StelLight** — 방송 스케줄(뱅온) 조회
+  - **GitHub** — 업데이트 확인 및 다운로드
+- 알림 구독 목록, 확인 주기 등 모든 설정은 사용자 PC에 로컬로 저장됩니다.
+- 사용자가 요청하지 않은 정보는 외부 서버로 전송하지 않습니다.
+
+## 라이선스 및 저작권
+
+이 프로젝트는 **MIT License**에 따라 배포됩니다.
+
+이 저장소는 다음 원본 프로젝트의 포크입니다.
+
+- 원본: https://github.com/tabiluv/stellastatus_app
+- 포크: https://github.com/Maroshall/stellastatus_app
+
+원본 프로젝트의 저작권 및 MIT 라이선스 조건을 존중하며, 이 포크에서 추가·수정한 Linux 관련 코드는 동일한 프로젝트 라이선스 조건에 따라 배포됩니다.
+
+자세한 내용은 저장소의 `LICENSE` 파일을 확인하세요.
