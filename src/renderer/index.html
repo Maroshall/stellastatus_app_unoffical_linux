@@ -123,10 +123,6 @@
             <div><div class="s-title" data-i18n="set.startup.t">시작 시 자동 실행</div><div class="s-desc" data-i18n="set.startup.d">부팅 시 트레이에서 자동으로 시작합니다.</div></div>
             <label class="switch"><input type="checkbox" id="setStartup"><span></span></label>
           </div>
-          <div class="setting-row">
-            <div><div class="s-title" data-i18n="set.beta.t">베타 버전 받기</div><div class="s-desc" data-i18n="set.beta.d">정식 출시 전 베타(시험판)를 우선으로 받아 설치합니다.</div></div>
-            <label class="switch"><input type="checkbox" id="setBeta"><span></span></label>
-          </div>
         </section>
 
         <!-- 알림 -->
@@ -224,12 +220,6 @@
             <button class="mini-btn ghost" id="btnCopyDiag" data-i18n="diag.btn">복사</button>
           </div>
           <pre class="diag-box" id="diagBox" aria-live="polite"></pre>
-
-          <div class="section-label" data-i18n="label.appManage">앱 관리</div>
-          <div class="setting-row">
-            <div><div class="s-title" data-i18n="uninstall.t">스텔라상태 제거</div><div class="s-desc" data-i18n="uninstall.d">이 컴퓨터에서 앱과 바로가기를 삭제합니다.</div></div>
-            <button class="mini-btn danger" id="btnUninstall" data-i18n="uninstall.btn">제거</button>
-          </div>
         </section>
       </div>
     </div>
@@ -267,15 +257,11 @@
       <div class="cm-head"><h2 data-i18n="contact.title">문의하기</h2><p data-i18n="contact.sub">편한 방법으로 문의해 주세요.</p></div>
       <button class="contact-opt" data-contact="email">
         <span class="co-ico" data-icon="mail"></span>
-        <div class="co-text"><div class="co-name" data-i18n="contact.email">이메일</div><div class="co-sub">contact@stellarium.kr</div></div>
+        <div class="co-text"><div class="co-name" data-i18n="contact.email">이메일</div><div class="co-sub">ryoyamada8083@proton.me</div></div>
       </button>
       <button class="contact-opt" data-contact="github">
         <span class="co-ico" data-icon="info"></span>
         <div class="co-text"><div class="co-name" data-i18n="contact.github">GitHub 이슈</div><div class="co-sub" data-i18n="contact.githubSub">버그 신고 · 기능 제안</div></div>
-      </button>
-      <button class="contact-opt" data-contact="x">
-        <span class="co-ico" data-icon="external"></span>
-        <div class="co-text"><div class="co-name" data-i18n="contact.x">X (트위터)</div><div class="co-sub" id="coXsub">DM 문의</div></div>
       </button>
     </div>
   </div>
@@ -298,14 +284,21 @@
     </div>
   </div>
 
-  <!-- 뱅온 캘린더 — web(stellarium.kr/calendar)을 webview 로 임베드 -->
+  <!-- 뱅온 캘린더 -->
   <div class="modal-backdrop" id="calModal" hidden>
     <div class="modal cal-modal">
       <button class="icon-btn cal-close" id="closeCal"></button>
-      <div class="cal-embed">
-        <webview id="calWebview" class="cal-webview" src="about:blank"></webview>
-        <div class="cal-embed-state" id="calLoading"><span class="cl-spinner"></span></div>
-        <div class="cal-embed-state" id="calError" hidden></div>
+      <div class="cal-head">
+        <button class="cal-nav" id="calPrev" aria-label="이전 달"></button>
+        <div class="cal-title" id="calTitle"></div>
+        <button class="cal-nav" id="calNext" aria-label="다음 달"></button>
+      </div>
+      <div class="cal-body">
+        <div class="cal-left">
+          <div class="cal-weekdays" id="calWeekdays"></div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+        <aside class="cal-detail" id="calDetail" hidden></aside>
       </div>
     </div>
   </div>
