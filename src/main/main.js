@@ -498,7 +498,7 @@ app.whenReady().then(async () => {
       mainWindow.webContents.send('members:network', {
         offline: false,
         initial: false,
-        message: '네트워크 연결됐어요! 다시 방송상태를 불러올게요',
+        message: '네트워크가 다시 연결됐어요! 다시 방송상태를 불러올게요',
       });
     }
   });
