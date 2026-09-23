@@ -63,14 +63,20 @@ jobs:
       - name: Build Linux AppImage
         run: npx electron-builder --linux AppImage --publish never
 
-      - name: Check AppImage
+      - name: Rename AppImage
         shell: bash
         run: |
-          echo "=== AppImage files ==="
-          ls -lah dist/*.AppImage
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
 
-          echo "=== GitHub tag ==="
-          echo "${GITHUB_REF_NAME}"
+          for file in dist/*.AppImage; do
+            [ -e "$file" ] || continue
+
+            base="$(basename "$file")"
+            stem="${base%.AppImage}"
+            product="${stem%-*}"
+
+            mv "$file" "dist/${product}-${TAG_VERSION}.AppImage"
+          done
 
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
@@ -90,4 +96,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
