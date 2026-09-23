@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
+const { randomUUID } = require('crypto');
 const {
   app,
   BrowserWindow,
@@ -402,6 +403,28 @@ function registerIpc() {
   ipcMain.handle('open:external', (_e, url) => {
     if (typeof url === 'string' && /^(https?:\/\/|mailto:)/.test(url)) shell.openExternal(url);
   });
+
+  // Stellarium 웹 캘린더
+  const webBase = () => process.env.STELLA_WEB_BASE || (isDev ? 'http://localhost:3000' : 'https://stellarium.kr');
+  ipcMain.handle('app:webCalUrl', () => process.env.STELLA_WEB_CAL_URL || `${webBase()}/calendar`);
+
+  // 통합 설문 — 익명 기기 ID를 유지해 같은 기기에서 응답을 수정/취소할 수 있게 한다.
+  const surveyDeviceId = () => {
+    let id = store.get('surveyDeviceId');
+    if (!id) { id = randomUUID(); store.set('surveyDeviceId', id); }
+    return id;
+  };
+  ipcMain.handle('survey:url', () => `${webBase()}/survey?d=${encodeURIComponent(surveyDeviceId())}`);
+  ipcMain.handle('survey:status', async () => {
+    try {
+      const r = await fetch(`${webBase()}/api/survey?d=${encodeURIComponent(surveyDeviceId())}`, { signal: AbortSignal.timeout(5000) });
+      if (!r.ok) return { open: false, choice: null };
+      const d = await r.json();
+      return { open: Boolean(d.open), choice: d.choice ?? null };
+    } catch { return { open: false, choice: null }; }
+  });
+  ipcMain.handle('survey:dismiss', () => { store.set('surveyBannerDismissed', true); return true; });
+  ipcMain.handle('survey:dismissed', () => Boolean(store.get('surveyBannerDismissed')));
 
   ipcMain.handle('update:check', () => {
     if (isDev) {

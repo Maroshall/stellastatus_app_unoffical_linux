@@ -149,6 +149,9 @@ class Poller extends EventEmitter {
       const wentLive = [];
       const wentOffline = [];
       for (const m of members) {
+        // 조회 실패로 상태를 알 수 없는 멤버는 이전 상태를 유지한다.
+        // Wi-Fi 재연결 때 이미 방송 중이던 멤버가 다시 '방송 시작'으로 처리되는 것을 방지한다.
+        if (m.error) continue;
         const prev = this._prevLive.get(m.key);
         if (prev === false && m.isLive) wentLive.push(m);
         if (prev === true && !m.isLive) wentOffline.push(m);
@@ -177,7 +180,6 @@ class Poller extends EventEmitter {
       return this._members;
     } finally {
       this._busy = false;
-    this._networkOffline = false;
       this.emit('polling', false);
     }
   }

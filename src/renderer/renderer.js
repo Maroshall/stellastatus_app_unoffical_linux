@@ -963,6 +963,54 @@
     await loadCalendar();
   }
   // 월 이동: 켜놓은 오른쪽 세부 패널은 그대로 유지한다(원래 선택한 날의 일정을 계속 보여줌).
+  // ── 통합 설문(web /survey 를 webview 로) ─────────────────────
+  async function openSurvey() {
+    openModalEl('#surveyModal');
+    const wv = $('#surveyWebview');
+    if (!wv || wv._loaded) return;
+    wv._loaded = true;
+    const loading = $('#surveyLoading');
+    const errEl = $('#surveyError');
+    if (loading) loading.hidden = false;
+    if (errEl) errEl.hidden = true;
+    let url = '';
+    try { url = await api.getSurveyUrl(); } catch {}
+    wv.addEventListener('did-finish-load', () => { if (loading) loading.hidden = true; });
+    wv.addEventListener('did-fail-load', (e) => {
+      if (e.errorCode === -3) return;
+      if (loading) loading.hidden = true;
+      if (errEl) { errEl.hidden = false; errEl.innerHTML = errorBoxHtml(T('sched.error'), `${e.errorDescription || ''} — ${url}`); }
+    });
+    if (url) wv.src = url;
+  }
+
+  async function updateSurveyBanner() {
+    const banner = $('#surveyBanner');
+    if (!banner) return;
+    try {
+      if (await api.isSurveyDismissed()) { banner.hidden = true; return; }
+      const s = await api.getSurveyStatus();
+      if (!s || !s.open) { banner.hidden = true; return; }
+      const voted = !!s.choice;
+      $('#surveyBannerT').textContent = T(voted ? 'survey.bannerTVoted' : 'survey.bannerT');
+      $('#surveyBannerD').textContent = T(voted ? 'survey.bannerDVoted' : 'survey.bannerD');
+      $('#surveyJoin').textContent = T(voted ? 'survey.edit' : 'survey.join');
+      banner.hidden = false;
+    } catch { banner.hidden = true; }
+  }
+
+  function wireSurvey() {
+    $('#surveyJoin').addEventListener('click', openSurvey);
+    $('#surveyDismiss').addEventListener('click', async () => {
+      $('#surveyBanner').hidden = true;
+      try { await api.dismissSurvey(); } catch {}
+    });
+    $('#closeSurvey').addEventListener('click', () => { closeModalEl('#surveyModal'); updateSurveyBanner(); });
+    $('#surveyModal').addEventListener('click', (e) => {
+      if (e.target.id === 'surveyModal') { closeModalEl('#surveyModal'); updateSurveyBanner(); }
+    });
+  }
+
   function calShift(delta) { let m = CAL.m + delta, y = CAL.y; if (m < 0) { m = 11; y--; } else if (m > 11) { m = 0; y++; } CAL.y = y; CAL.m = m; loadCalendar(); }
 
   async function loadCalendar() {
@@ -1869,6 +1917,7 @@
     wireTerms();
     wireSchedDetail();
     wireCalendar();
+    wireSurvey();
     wireWhatsNew();
 
     state.settings = await api.getSettings();
@@ -1899,6 +1948,7 @@
 
     // 업데이트 후 첫 실행이면 이번 버전에서 바뀐 점을 딱 1번 안내한다.
     maybeShowWhatsNew();
+    updateSurveyBanner();
 
     api.onMembers((members) => {
       try {
