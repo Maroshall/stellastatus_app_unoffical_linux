@@ -74,8 +74,13 @@ jobs:
             base="$(basename "$file")"
             stem="${base%.AppImage}"
             product="${stem%-*}"
+            target="dist/${product}-${TAG_VERSION}.AppImage"
 
-            mv "$file" "dist/${product}-${TAG_VERSION}.AppImage"
+            if [ "$file" = "$target" ]; then
+              echo "Already correctly named: $file"
+            else
+              mv "$file" "$target"
+            fi
           done
 
       - name: Upload AppImage artifact
