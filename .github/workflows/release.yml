@@ -63,10 +63,14 @@ jobs:
       - name: Build Linux AppImage
         run: npx electron-builder --linux AppImage --publish never
 
-      - name: Rename AppImage
+           - name: Rename AppImage
         shell: bash
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
+
+          echo "TAG_VERSION=$TAG_VERSION"
+          echo "AppImages before rename:"
+          ls -lah dist/*.AppImage
 
           for file in dist/*.AppImage; do
             [ -e "$file" ] || continue
@@ -76,13 +80,19 @@ jobs:
             product="${stem%-*}"
             target="dist/${product}-${TAG_VERSION}.AppImage"
 
+            echo "SOURCE=$file"
+            echo "TARGET=$target"
+
             if [ "$file" = "$target" ]; then
-              echo "Already correctly named: $file"
-            else
-              mv "$file" "$target"
+              echo "Already correctly named. Skipping."
+              continue
             fi
+
+            mv -- "$file" "$target"
           done
 
+          echo "AppImages after rename:"
+          ls -lah dist/*.AppImage
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
         with:
