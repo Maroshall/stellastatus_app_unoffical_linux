@@ -63,7 +63,7 @@ jobs:
       - name: Build Linux AppImage
         run: npx electron-builder --linux AppImage --publish never
 
-           - name: Rename AppImage
+      - name: Rename AppImage
         shell: bash
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
@@ -88,11 +88,17 @@ jobs:
               continue
             fi
 
+            if [ -e "$target" ]; then
+              echo "Target already exists. Removing old target first."
+              rm -f -- "$target"
+            fi
+
             mv -- "$file" "$target"
           done
 
           echo "AppImages after rename:"
           ls -lah dist/*.AppImage
+
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
         with:
